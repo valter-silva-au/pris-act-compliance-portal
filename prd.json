@@ -41,7 +41,7 @@
         "Protected endpoints return 401 without token",
         "Passwords are bcrypt hashed, never stored in plain text"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-002"
       ]
