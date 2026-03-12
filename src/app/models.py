@@ -149,6 +149,7 @@ class DataRegister(Base):
     access_controls = Column(Text)
     retention_period = Column(String(255))
     legal_basis = Column(Text)
+    date_last_reviewed = Column(Date)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
 
     # Relationships

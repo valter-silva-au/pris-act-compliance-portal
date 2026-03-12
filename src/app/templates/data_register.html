@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Data Register - WA PRIS Act Compliance Portal{% endblock %}
+
+{% block page_title %}Personal Information Register{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900">Data Holdings Register</h3>
+            <p class="text-sm text-gray-600 mt-1">Track all personal information your organization holds (IPPs 1-4)</p>
+        </div>
+        <button onclick="openAddModal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+            + Add Data Category
+        </button>
+    </div>
+
+    {% if data_entries %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Data Category
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Storage Location
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Retention Period
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Last Reviewed
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for entry in data_entries %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <button onclick="toggleDetails('details-{{ entry.id }}')" class="mr-2 text-gray-500 hover:text-gray-700">
+                                <svg id="icon-{{ entry.id }}" class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">{{ entry.data_category }}</div>
+                                {% if entry.description %}
+                                <div class="text-sm text-gray-500">{{ entry.description[:60] }}{% if entry.description|length > 60 %}...{% endif %}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900">
+                        {{ entry.storage_location or 'Not specified' }}
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900">
+                        {{ entry.retention_period or 'Not specified' }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if entry.date_last_reviewed %}
+                        {{ entry.date_last_reviewed.strftime('%Y-%m-%d') }}
+                        {% else %}
+                        <span class="text-orange-600">Not reviewed</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button onclick="openEditModal({{ entry.id }}, '{{ entry.data_category }}', '{{ entry.description or '' }}', '{{ entry.storage_location or '' }}', '{{ entry.access_controls or '' }}', '{{ entry.retention_period or '' }}', '{{ entry.legal_basis or '' }}', '{{ entry.date_last_reviewed.strftime('%Y-%m-%d') if entry.date_last_reviewed else '' }}')" class="text-blue-600 hover:text-blue-900">
+                            Edit
+                        </button>
+                        <button onclick="deleteEntry({{ entry.id }})" class="text-red-600 hover:text-red-900">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+                <tr id="details-{{ entry.id }}" class="hidden bg-gray-50">
+                    <td colspan="5" class="px-6 py-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Full Description</h4>
+                                <p class="text-sm text-gray-600">{{ entry.description or 'No description provided' }}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Access Controls</h4>
+                                <p class="text-sm text-gray-600">{{ entry.access_controls or 'Not specified' }}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Legal Basis</h4>
+                                <p class="text-sm text-gray-600">{{ entry.legal_basis or 'Not specified' }}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Storage Location</h4>
+                                <p class="text-sm text-gray-600">{{ entry.storage_location or 'Not specified' }}</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No Data Holdings Registered</h3>
+        <p class="mt-1 text-sm text-gray-500">Get started by adding a data category to your register.</p>
+        <div class="mt-6">
+            <button onclick="openAddModal()" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                + Add Data Category
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-blue-700">
+                <strong>IPPs 1-4 Requirement:</strong> Organizations must maintain a register of personal information they hold, including storage location, retention periods, access controls, and legal basis for collection.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="entryModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-2/3 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="modalTitle" class="text-lg font-semibold text-gray-900">Add Data Category</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <form id="entryForm" method="post" action="/api/data-register">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label for="data_category" class="block text-sm font-medium text-gray-700 mb-1">Data Category *</label>
+                    <input type="text" id="data_category" name="data_category" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="e.g., Employee records, Client contact details">
+                </div>
+
+                <div class="col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea id="description" name="description" rows="2"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Describe what information is included"></textarea>
+                </div>
+
+                <div>
+                    <label for="storage_location" class="block text-sm font-medium text-gray-700 mb-1">Storage Location</label>
+                    <input type="text" id="storage_location" name="storage_location"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="e.g., HR database, Filing cabinet Room 3">
+                </div>
+
+                <div>
+                    <label for="retention_period" class="block text-sm font-medium text-gray-700 mb-1">Retention Period</label>
+                    <input type="text" id="retention_period" name="retention_period"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="e.g., 7 years, Indefinite">
+                </div>
+
+                <div class="col-span-2">
+                    <label for="access_controls" class="block text-sm font-medium text-gray-700 mb-1">Access Controls / Who Can Access</label>
+                    <textarea id="access_controls" name="access_controls" rows="2"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Describe who has access (roles/teams)"></textarea>
+                </div>
+
+                <div class="col-span-2">
+                    <label for="legal_basis" class="block text-sm font-medium text-gray-700 mb-1">Legal Basis for Collection</label>
+                    <textarea id="legal_basis" name="legal_basis" rows="2"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="e.g., Employment contract, Consent, Legal obligation"></textarea>
+                </div>
+
+                <div>
+                    <label for="date_last_reviewed" class="block text-sm font-medium text-gray-700 mb-1">Date Last Reviewed</label>
+                    <input type="date" id="date_last_reviewed" name="date_last_reviewed"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                    Save Entry
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleDetails(id) {
+    const detailsRow = document.getElementById(id);
+    const iconId = id.replace('details-', 'icon-');
+    const icon = document.getElementById(iconId);
+
+    if (detailsRow.classList.contains('hidden')) {
+        detailsRow.classList.remove('hidden');
+        icon.classList.add('rotate-90');
+    } else {
+        detailsRow.classList.add('hidden');
+        icon.classList.remove('rotate-90');
+    }
+}
+
+function openAddModal() {
+    document.getElementById('modalTitle').textContent = 'Add Data Category';
+    document.getElementById('entryForm').action = '/api/data-register';
+    document.getElementById('entryForm').reset();
+    document.getElementById('entryModal').classList.remove('hidden');
+}
+
+function openEditModal(id, category, description, storage, access, retention, legal, reviewed) {
+    document.getElementById('modalTitle').textContent = 'Edit Data Category';
+    document.getElementById('entryForm').action = '/api/data-register/' + id;
+    document.getElementById('data_category').value = category;
+    document.getElementById('description').value = description;
+    document.getElementById('storage_location').value = storage;
+    document.getElementById('access_controls').value = access;
+    document.getElementById('retention_period').value = retention;
+    document.getElementById('legal_basis').value = legal;
+    document.getElementById('date_last_reviewed').value = reviewed;
+    document.getElementById('entryModal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('entryModal').classList.add('hidden');
+}
+
+function deleteEntry(id) {
+    if (confirm('Are you sure you want to delete this data register entry?')) {
+        fetch('/api/data-register/' + id, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                alert('Failed to delete entry');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to delete entry');
+        });
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('entryModal');
+    if (event.target === modal) {
+        closeModal();
+    }
+}
+</script>
+{% endblock %}

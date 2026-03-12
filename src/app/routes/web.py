@@ -15,7 +15,7 @@ from src.app.auth import (
     get_user_by_email,
 )
 from src.app.database import get_db
-from src.app.models import Organization, User, PrivacyOfficer, PIA, PIAStatus, RiskLevel
+from src.app.models import Organization, User, PrivacyOfficer, PIA, PIAStatus, RiskLevel, DataRegister
 from datetime import date
 import json
 
@@ -668,3 +668,206 @@ async def update_pia_status(
         "status": pia.status.value,
         "badge_html": f'<span class="px-2 py-1 text-xs font-semibold rounded-full {badge_class}">{pia.status.value.replace("_", " ").title()}</span>'
     }
+
+
+@router.get("/data-register", response_class=HTMLResponse)
+async def data_register_page(request: Request, db: Session = Depends(get_db)):
+    """
+    Display the Data Register page showing all personal information holdings.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+
+    Returns:
+        HTMLResponse: Rendered data register page or redirect to login
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get all data register entries for the organization
+    data_entries = db.query(DataRegister).filter(
+        DataRegister.organization_id == user.organization_id
+    ).order_by(DataRegister.data_category).all()
+
+    return templates.TemplateResponse(
+        "data_register.html",
+        {
+            "request": request,
+            "user": user,
+            "data_entries": data_entries
+        }
+    )
+
+
+@router.post("/api/data-register", response_class=RedirectResponse)
+async def create_data_register_entry(
+    request: Request,
+    data_category: str = Form(...),
+    description: str = Form(""),
+    storage_location: str = Form(""),
+    access_controls: str = Form(""),
+    retention_period: str = Form(""),
+    legal_basis: str = Form(""),
+    date_last_reviewed: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new data register entry.
+
+    Args:
+        request: FastAPI request object
+        data_category: Category of personal information
+        description: Description of the data
+        storage_location: Where the data is stored
+        access_controls: Who can access the data
+        retention_period: How long data is retained
+        legal_basis: Legal basis for collecting the data
+        date_last_reviewed: Date the entry was last reviewed
+        db: Database session
+
+    Returns:
+        RedirectResponse: Redirect to data register page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Parse date if provided
+    parsed_date = None
+    if date_last_reviewed:
+        try:
+            from datetime import datetime
+            parsed_date = datetime.strptime(date_last_reviewed, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    # Create new data register entry
+    new_entry = DataRegister(
+        data_category=data_category,
+        description=description if description else None,
+        storage_location=storage_location if storage_location else None,
+        access_controls=access_controls if access_controls else None,
+        retention_period=retention_period if retention_period else None,
+        legal_basis=legal_basis if legal_basis else None,
+        date_last_reviewed=parsed_date,
+        organization_id=user.organization_id
+    )
+    db.add(new_entry)
+    db.commit()
+
+    return RedirectResponse(url="/data-register", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.put("/api/data-register/{entry_id}", response_class=RedirectResponse)
+@router.post("/api/data-register/{entry_id}", response_class=RedirectResponse)
+async def update_data_register_entry(
+    request: Request,
+    entry_id: int,
+    data_category: str = Form(...),
+    description: str = Form(""),
+    storage_location: str = Form(""),
+    access_controls: str = Form(""),
+    retention_period: str = Form(""),
+    legal_basis: str = Form(""),
+    date_last_reviewed: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Update an existing data register entry.
+
+    Args:
+        request: FastAPI request object
+        entry_id: ID of the entry to update
+        data_category: Category of personal information
+        description: Description of the data
+        storage_location: Where the data is stored
+        access_controls: Who can access the data
+        retention_period: How long data is retained
+        legal_basis: Legal basis for collecting the data
+        date_last_reviewed: Date the entry was last reviewed
+        db: Database session
+
+    Returns:
+        RedirectResponse: Redirect to data register page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get the data register entry
+    entry = db.query(DataRegister).filter(
+        DataRegister.id == entry_id,
+        DataRegister.organization_id == user.organization_id
+    ).first()
+
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Data register entry not found"
+        )
+
+    # Parse date if provided
+    parsed_date = None
+    if date_last_reviewed:
+        try:
+            from datetime import datetime
+            parsed_date = datetime.strptime(date_last_reviewed, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    # Update entry
+    entry.data_category = data_category
+    entry.description = description if description else None
+    entry.storage_location = storage_location if storage_location else None
+    entry.access_controls = access_controls if access_controls else None
+    entry.retention_period = retention_period if retention_period else None
+    entry.legal_basis = legal_basis if legal_basis else None
+    entry.date_last_reviewed = parsed_date
+
+    db.commit()
+
+    return RedirectResponse(url="/data-register", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.delete("/api/data-register/{entry_id}")
+async def delete_data_register_entry(
+    request: Request,
+    entry_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a data register entry.
+
+    Args:
+        request: FastAPI request object
+        entry_id: ID of the entry to delete
+        db: Database session
+
+    Returns:
+        dict: Success message
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+
+    # Get the data register entry
+    entry = db.query(DataRegister).filter(
+        DataRegister.id == entry_id,
+        DataRegister.organization_id == user.organization_id
+    ).first()
+
+    if not entry:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Data register entry not found"
+        )
+
+    db.delete(entry)
+    db.commit()
+
+    return {"message": "Data register entry deleted successfully"}
