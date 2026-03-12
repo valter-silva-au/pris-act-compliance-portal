@@ -122,7 +122,7 @@
         "DELETE /api/data-register/{id} removes an entry",
         "Tests verify CRUD operations"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-004"
       ]
