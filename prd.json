@@ -1,7 +1,6 @@
 {
   "name": "wa-pris-compliance-portal",
   "test_command": "python3 -m pytest tests/ -v",
-  "deploy_target": "docker",
   "tasks": [
     {
       "id": "TASK-001",
@@ -26,8 +25,10 @@
         "init_db() creates all tables in SQLite",
         "Tests verify model instantiation"
       ],
-      "status": "pending",
-      "dependencies": ["TASK-001"]
+      "status": "done",
+      "dependencies": [
+        "TASK-001"
+      ]
     },
     {
       "id": "TASK-003",
@@ -41,7 +42,9 @@
         "Passwords are bcrypt hashed, never stored in plain text"
       ],
       "status": "pending",
-      "dependencies": ["TASK-002"]
+      "dependencies": [
+        "TASK-002"
+      ]
     },
     {
       "id": "TASK-004",
@@ -55,7 +58,9 @@
         "Templates use Jinja2 extends/blocks pattern"
       ],
       "status": "pending",
-      "dependencies": ["TASK-003"]
+      "dependencies": [
+        "TASK-003"
+      ]
     },
     {
       "id": "TASK-005",
@@ -69,7 +74,9 @@
         "Tests verify save and retrieval of IPP assessments"
       ],
       "status": "pending",
-      "dependencies": ["TASK-004"]
+      "dependencies": [
+        "TASK-004"
+      ]
     },
     {
       "id": "TASK-006",
@@ -83,7 +90,9 @@
         "Tests verify designation and retrieval"
       ],
       "status": "pending",
-      "dependencies": ["TASK-004"]
+      "dependencies": [
+        "TASK-004"
+      ]
     },
     {
       "id": "TASK-007",
@@ -98,7 +107,9 @@
         "Tests verify CRUD and status transitions"
       ],
       "status": "pending",
-      "dependencies": ["TASK-004"]
+      "dependencies": [
+        "TASK-004"
+      ]
     },
     {
       "id": "TASK-008",
@@ -112,7 +123,9 @@
         "Tests verify CRUD operations"
       ],
       "status": "pending",
-      "dependencies": ["TASK-004"]
+      "dependencies": [
+        "TASK-004"
+      ]
     },
     {
       "id": "TASK-009",
@@ -126,7 +139,9 @@
         "Tests verify CRUD and due date calculation"
       ],
       "status": "pending",
-      "dependencies": ["TASK-004"]
+      "dependencies": [
+        "TASK-004"
+      ]
     },
     {
       "id": "TASK-010",
@@ -141,7 +156,9 @@
         "Tests verify CRUD and status transitions"
       ],
       "status": "pending",
-      "dependencies": ["TASK-004"]
+      "dependencies": [
+        "TASK-004"
+      ]
     },
     {
       "id": "TASK-011",
@@ -156,7 +173,14 @@
         "Tests verify dashboard data aggregation"
       ],
       "status": "pending",
-      "dependencies": ["TASK-005", "TASK-006", "TASK-007", "TASK-008", "TASK-009", "TASK-010"]
+      "dependencies": [
+        "TASK-005",
+        "TASK-006",
+        "TASK-007",
+        "TASK-008",
+        "TASK-009",
+        "TASK-010"
+      ]
     },
     {
       "id": "TASK-012",
@@ -170,7 +194,9 @@
         "Tests verify PDF endpoints return 200 with correct content type"
       ],
       "status": "pending",
-      "dependencies": ["TASK-011"]
+      "dependencies": [
+        "TASK-011"
+      ]
     },
     {
       "id": "TASK-013",
@@ -184,7 +210,9 @@
         "Security tests verify cross-tenant isolation"
       ],
       "status": "pending",
-      "dependencies": ["TASK-003"]
+      "dependencies": [
+        "TASK-003"
+      ]
     },
     {
       "id": "TASK-014",
@@ -199,7 +227,9 @@
         "Tests verify role-based access restrictions"
       ],
       "status": "pending",
-      "dependencies": ["TASK-013"]
+      "dependencies": [
+        "TASK-013"
+      ]
     },
     {
       "id": "TASK-015",
@@ -214,7 +244,9 @@
         "Tests verify onboarding flow"
       ],
       "status": "pending",
-      "dependencies": ["TASK-011"]
+      "dependencies": [
+        "TASK-011"
+      ]
     },
     {
       "id": "TASK-016",
@@ -228,7 +260,9 @@
         "Tests verify notification creation and read status"
       ],
       "status": "pending",
-      "dependencies": ["TASK-011"]
+      "dependencies": [
+        "TASK-011"
+      ]
     },
     {
       "id": "TASK-017",
@@ -242,7 +276,9 @@
         "Tests verify audit entries are created on CRUD operations"
       ],
       "status": "pending",
-      "dependencies": ["TASK-011"]
+      "dependencies": [
+        "TASK-011"
+      ]
     },
     {
       "id": "TASK-018",
@@ -257,7 +293,9 @@
         "CTA links to /register"
       ],
       "status": "pending",
-      "dependencies": ["TASK-004"]
+      "dependencies": [
+        "TASK-004"
+      ]
     },
     {
       "id": "TASK-019",
@@ -271,7 +309,9 @@
         ".dockerignore excludes unnecessary files"
       ],
       "status": "pending",
-      "dependencies": ["TASK-001"]
+      "dependencies": [
+        "TASK-001"
+      ]
     },
     {
       "id": "TASK-020",
@@ -284,7 +324,10 @@
         "README.md has CI status badge"
       ],
       "status": "pending",
-      "dependencies": ["TASK-001"]
+      "dependencies": [
+        "TASK-001"
+      ]
     }
-  ]
+  ],
+  "deploy_target": "docker"
 }
