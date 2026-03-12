@@ -57,7 +57,7 @@
         "GET / redirects to /dashboard or /login based on auth state",
         "Templates use Jinja2 extends/blocks pattern"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-003"
       ]
@@ -73,7 +73,7 @@
         "Overall compliance score updates when individual IPPs change",
         "Tests verify save and retrieval of IPP assessments"
       ],
-      "status": "done",
+      "status": "pending",
       "dependencies": [
         "TASK-004"
       ]
