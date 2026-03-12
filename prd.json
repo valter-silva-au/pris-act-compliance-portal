@@ -172,7 +172,7 @@
         "Dashboard loads in under 2 seconds",
         "Tests verify dashboard data aggregation"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-005",
         "TASK-006",
