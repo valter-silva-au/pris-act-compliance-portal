@@ -17,7 +17,8 @@ from src.app.auth import (
 from src.app.database import get_db
 from src.app.models import (
     Organization, User, PrivacyOfficer, PIA, PIAStatus, RiskLevel, DataRegister,
-    AccessRequest, RequestType, AccessRequestStatus, BreachIncident, BreachIncidentStatus
+    AccessRequest, RequestType, AccessRequestStatus, BreachIncident, BreachIncidentStatus,
+    IPPAssessment, ComplianceStatus, AuditLog
 )
 from datetime import date, timedelta
 import json
@@ -227,7 +228,7 @@ async def logout():
 @router.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, db: Session = Depends(get_db)):
     """
-    Display the dashboard page.
+    Display the dashboard page with compliance summary data.
 
     Args:
         request: FastAPI request object
@@ -240,9 +241,100 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     if not user:
         return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
 
+    org_id = user.organization_id
+
+    # 1. IPP Compliance Score
+    ipp_assessments = db.query(IPPAssessment).filter(
+        IPPAssessment.organization_id == org_id
+    ).all()
+
+    compliant_count = sum(
+        1 for a in ipp_assessments
+        if a.compliance_status == ComplianceStatus.COMPLIANT
+    )
+    total_ipps = 11
+    compliance_percentage = round((compliant_count / total_ipps * 100) if total_ipps > 0 else 0)
+
+    # 2. Privacy Officer Status
+    privacy_officer = db.query(PrivacyOfficer).filter(
+        PrivacyOfficer.organization_id == org_id
+    ).first()
+
+    # 3. PIAs Count with Risk Breakdown
+    pias = db.query(PIA).filter(
+        PIA.organization_id == org_id,
+        PIA.status != PIAStatus.APPROVED
+    ).all()
+
+    pias_by_risk = {
+        "low": sum(1 for p in pias if p.risk_level == RiskLevel.LOW),
+        "medium": sum(1 for p in pias if p.risk_level == RiskLevel.MEDIUM),
+        "high": sum(1 for p in pias if p.risk_level == RiskLevel.HIGH),
+        "critical": sum(1 for p in pias if p.risk_level == RiskLevel.CRITICAL),
+    }
+    total_open_pias = len(pias)
+
+    # 4. Access/Correction Requests with Overdue Count
+    today = date.today()
+    pending_requests = db.query(AccessRequest).filter(
+        AccessRequest.organization_id == org_id,
+        AccessRequest.status.in_([AccessRequestStatus.RECEIVED, AccessRequestStatus.IN_PROGRESS])
+    ).all()
+
+    overdue_requests = [r for r in pending_requests if r.due_date < today]
+    total_pending_requests = len(pending_requests)
+    overdue_count = len(overdue_requests)
+
+    # 5. Active Breach Incidents with Severity Summary
+    active_incidents = db.query(BreachIncident).filter(
+        BreachIncident.organization_id == org_id,
+        BreachIncident.status.in_([
+            BreachIncidentStatus.DETECTED,
+            BreachIncidentStatus.INVESTIGATING,
+            BreachIncidentStatus.CONTAINED
+        ])
+    ).all()
+
+    incidents_by_severity = {
+        "low": sum(1 for i in active_incidents if i.severity == RiskLevel.LOW),
+        "medium": sum(1 for i in active_incidents if i.severity == RiskLevel.MEDIUM),
+        "high": sum(1 for i in active_incidents if i.severity == RiskLevel.HIGH),
+        "critical": sum(1 for i in active_incidents if i.severity == RiskLevel.CRITICAL),
+    }
+    total_active_incidents = len(active_incidents)
+
+    # 6. Recent Audit Trail (last 5 actions)
+    recent_audit_logs = db.query(AuditLog).filter(
+        AuditLog.user_id.in_(
+            db.query(User.id).filter(User.organization_id == org_id)
+        )
+    ).order_by(AuditLog.timestamp.desc()).limit(5).all()
+
     return templates.TemplateResponse(
         "dashboard.html",
-        {"request": request, "user": user}
+        {
+            "request": request,
+            "user": user,
+            "ipp_compliance": {
+                "compliant": compliant_count,
+                "total": total_ipps,
+                "percentage": compliance_percentage
+            },
+            "privacy_officer": privacy_officer,
+            "pias": {
+                "total": total_open_pias,
+                "by_risk": pias_by_risk
+            },
+            "requests": {
+                "total": total_pending_requests,
+                "overdue": overdue_count
+            },
+            "incidents": {
+                "total": total_active_incidents,
+                "by_severity": incidents_by_severity
+            },
+            "audit_logs": recent_audit_logs
+        }
     )
 
 
