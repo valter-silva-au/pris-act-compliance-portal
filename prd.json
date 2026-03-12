@@ -1,0 +1,290 @@
+{
+  "name": "wa-pris-compliance-portal",
+  "test_command": "python3 -m pytest tests/ -v",
+  "deploy_target": "docker",
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "Initialize Python project with FastAPI",
+      "description": "Create a Python project with pyproject.toml (name='wa-pris-compliance-portal', Python>=3.11), src/app/ package layout with __init__.py, main.py with a FastAPI app instance, and a tests/ directory with conftest.py. Dependencies: fastapi, uvicorn, sqlalchemy, python-jose[cryptography], passlib[bcrypt], jinja2, python-multipart. Dev deps: pytest, httpx (for TestClient). Add a health check endpoint GET /health returning {\"status\": \"ok\"}.",
+      "acceptance_criteria": [
+        "pyproject.toml exists with correct dependencies",
+        "src/app/main.py creates a FastAPI app",
+        "GET /health returns {\"status\": \"ok\"} with 200",
+        "pytest runs with 0 errors"
+      ],
+      "status": "pending",
+      "dependencies": []
+    },
+    {
+      "id": "TASK-002",
+      "title": "Database models with SQLAlchemy",
+      "description": "Create src/app/models.py with SQLAlchemy ORM models: Organization (id, name, abn, industry, created_at), User (id, email, hashed_password, full_name, role, organization_id FK), PrivacyOfficer (id, user_id FK, organization_id FK, designation_date, contact_phone), PIA (id, title, description, status enum [draft/in_review/approved/rejected], risk_level enum [low/medium/high/critical], organization_id FK, created_by FK, created_at, updated_at), DataRegister (id, data_category, description, storage_location, access_controls, retention_period, legal_basis, organization_id FK), AccessRequest (id, requester_name, requester_email, request_type enum [access/correction], description, status enum [received/in_progress/completed/denied], due_date, organization_id FK, created_at), BreachIncident (id, title, description, severity enum [low/medium/high/critical], date_discovered, date_reported, affected_records_count, containment_actions, status enum [detected/investigating/contained/resolved/reported], organization_id FK, created_at), IPPAssessment (id, ipp_number 1-11, ipp_name, compliance_status enum [compliant/partial/non_compliant/not_assessed], evidence_notes, organization_id FK, updated_at), AuditLog (id, user_id FK, action, entity_type, entity_id, details JSON, timestamp). Create src/app/database.py with engine, SessionLocal, Base, and get_db dependency. Create an Alembic-free init_db() that calls Base.metadata.create_all(). Write tests for model creation.",
+      "acceptance_criteria": [
+        "All 9 models defined with correct fields and relationships",
+        "database.py provides get_db() dependency",
+        "init_db() creates all tables in SQLite",
+        "Tests verify model instantiation"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-001"]
+    },
+    {
+      "id": "TASK-003",
+      "title": "JWT authentication system",
+      "description": "Create src/app/auth.py with: password hashing using passlib bcrypt, JWT token creation/verification using python-jose (secret from env var SECRET_KEY, algorithm HS256, 30min expiry), get_current_user dependency that extracts user from Authorization Bearer token, register endpoint POST /auth/register (email, password, full_name, org_name) that creates Organization + User, login endpoint POST /auth/login (email, password) returning {\"access_token\": ..., \"token_type\": \"bearer\"}. Write tests for register and login flow.",
+      "acceptance_criteria": [
+        "POST /auth/register creates org and user, returns 201",
+        "POST /auth/login with valid creds returns JWT token",
+        "POST /auth/login with invalid creds returns 401",
+        "Protected endpoints return 401 without token",
+        "Passwords are bcrypt hashed, never stored in plain text"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-002"]
+    },
+    {
+      "id": "TASK-004",
+      "title": "Base HTML templates with Jinja2 and HTMX",
+      "description": "Create src/app/templates/ directory. Create base.html with: HTML5 doctype, Tailwind CSS via CDN (script src), HTMX via CDN (script src), a sidebar navigation (Dashboard, IPP Checklist, Privacy Officer, PIAs, Data Register, Access Requests, Incidents, Settings), a main content area, and a top bar showing logged-in user name and logout button. Create src/app/templates/login.html and register.html with forms. Create src/app/routes/ package with web.py serving HTML pages via Jinja2Templates. Mount static files if needed. The sidebar should use Tailwind classes for a clean, professional dark sidebar with white text. All pages should extend base.html.",
+      "acceptance_criteria": [
+        "base.html loads Tailwind CSS and HTMX from CDN",
+        "Sidebar shows all navigation items",
+        "login.html and register.html render as standalone pages",
+        "GET / redirects to /dashboard or /login based on auth state",
+        "Templates use Jinja2 extends/blocks pattern"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-003"]
+    },
+    {
+      "id": "TASK-005",
+      "title": "IPP Compliance Checklist",
+      "description": "Create the IPP assessment page at GET /ipp-checklist. Display all 11 WA PRIS Act Information Privacy Principles as a checklist: IPP 1 - Collection of personal information (lawful, necessary, directly from individual), IPP 2 - Use and disclosure (only for collected purpose), IPP 3 - Data quality (accurate, complete, up-to-date), IPP 4 - Data security (protect against loss, unauthorised access), IPP 5 - Openness (publish privacy policy), IPP 6 - Access to personal information (individuals can request access), IPP 7 - Correction of personal information (individuals can request correction), IPP 8 - Accuracy of personal information before use, IPP 9 - Use of government identifiers, IPP 10 - Cross-border data transfer restrictions, IPP 11 - Sensitive information (additional protections). Each IPP shows: name, brief description, compliance status dropdown (Not Assessed/Compliant/Partially Compliant/Non-Compliant), evidence notes textarea. Use HTMX to save changes without full page reload (POST /api/ipp/{ipp_number}). Show an overall compliance score at the top (e.g., '7/11 Compliant'). Write tests for the API endpoint.",
+      "acceptance_criteria": [
+        "GET /ipp-checklist shows all 11 IPPs with descriptions",
+        "Each IPP has a status dropdown and evidence notes field",
+        "POST /api/ipp/{number} saves assessment to database",
+        "Overall compliance score updates when individual IPPs change",
+        "Tests verify save and retrieval of IPP assessments"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-004"]
+    },
+    {
+      "id": "TASK-006",
+      "title": "Privacy Officer management",
+      "description": "Create a Privacy Officer page at GET /privacy-officer. Under the PRIS Act, every CSP must designate a Privacy Officer. The page shows: current designated officer (name, email, phone, designation date) or a prompt to designate one. Form to designate a new officer from existing org users (dropdown of users) or add external contact details. Only Admin role can designate/change the officer. Show officer's responsibilities summary (handle privacy complaints, oversee PIAs, manage breach response). Write tests.",
+      "acceptance_criteria": [
+        "GET /privacy-officer shows current officer or designation prompt",
+        "POST /api/privacy-officer designates an officer",
+        "Only admin users can designate/change officers",
+        "Officer details display name, email, phone, designation date",
+        "Tests verify designation and retrieval"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-004"]
+    },
+    {
+      "id": "TASK-007",
+      "title": "Privacy Impact Assessment workflow",
+      "description": "Create PIA management at GET /pias (list) and GET /pias/new (create form). A PIA includes: title, project/initiative description, data types involved (checkboxes: names, addresses, health info, financial, government IDs, other), data flow description, risk level assessment (low/medium/high/critical), mitigation measures textarea, status (draft -> in_review -> approved/rejected). List page shows all PIAs with status badges and risk level indicators. Detail page GET /pias/{id} shows full PIA with edit capability. Use HTMX for status transitions. Write tests for CRUD operations.",
+      "acceptance_criteria": [
+        "GET /pias lists all PIAs with status and risk badges",
+        "GET /pias/new shows creation form with all fields",
+        "POST /api/pias creates a new PIA in draft status",
+        "PUT /api/pias/{id} updates PIA fields",
+        "PATCH /api/pias/{id}/status transitions PIA status",
+        "Tests verify CRUD and status transitions"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-004"]
+    },
+    {
+      "id": "TASK-008",
+      "title": "Personal Information Register",
+      "description": "Create a data register at GET /data-register. Under IPPs 1-4, organizations must know what personal information they hold. The register is a table showing: data category (e.g., 'Employee records', 'Client contact details'), description, storage location (e.g., 'HR database', 'Filing cabinet Room 3'), who can access it (roles/teams), retention period, legal basis for collection, date last reviewed. Provide add/edit/delete functionality via forms. Each row should be expandable to show full details. Write tests.",
+      "acceptance_criteria": [
+        "GET /data-register shows table of all data holdings",
+        "POST /api/data-register adds new entry",
+        "PUT /api/data-register/{id} updates an entry",
+        "DELETE /api/data-register/{id} removes an entry",
+        "Tests verify CRUD operations"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-004"]
+    },
+    {
+      "id": "TASK-009",
+      "title": "Access and Correction Request tracker",
+      "description": "Create request tracker at GET /requests. Under IPPs 6 & 7, individuals can request access to or correction of their personal information. The tracker logs: requester name, requester email, request type (access or correction), description of what's requested, date received, due date (auto-set to 45 days from receipt per PRIS Act), assigned handler (dropdown of org users), status (received/in_progress/completed/denied), response notes, date completed. List view with filters by status and type. Detail view with full history. Write tests.",
+      "acceptance_criteria": [
+        "GET /requests lists all requests with status badges",
+        "POST /api/requests creates new request with auto-calculated due date",
+        "PUT /api/requests/{id} updates request details and status",
+        "Due date is automatically set to 45 days from creation",
+        "Tests verify CRUD and due date calculation"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-004"]
+    },
+    {
+      "id": "TASK-010",
+      "title": "Breach Incident Logger",
+      "description": "Create breach incident management at GET /incidents. Mandatory breach notification starts Jan 1, 2027. The logger captures: incident title, description of what happened, date discovered, severity (low/medium/high/critical), estimated number of affected records, types of data affected (checkboxes), containment actions taken, status (detected/investigating/contained/resolved/reported), notification details (if reportable: date notified, authority notified). List view with severity color coding. Detail view with timeline. Write tests.",
+      "acceptance_criteria": [
+        "GET /incidents lists all incidents with severity color coding",
+        "POST /api/incidents creates new incident",
+        "PUT /api/incidents/{id} updates incident details",
+        "PATCH /api/incidents/{id}/status transitions incident status",
+        "Severity levels have distinct visual indicators (red/orange/yellow/blue)",
+        "Tests verify CRUD and status transitions"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-004"]
+    },
+    {
+      "id": "TASK-011",
+      "title": "Compliance Dashboard",
+      "description": "Create the main dashboard at GET /dashboard. This is the first page users see after login. It shows: overall IPP compliance score (X/11 compliant) with a progress ring or bar, Privacy Officer status (designated or 'Action Required'), open PIAs count with risk breakdown, pending access/correction requests with overdue count highlighted in red, active breach incidents with severity summary, recent audit trail entries (last 5 actions). Each section links to its detail page. Use Tailwind cards for each section. No JavaScript charts needed - use Tailwind progress bars and colored badges.",
+      "acceptance_criteria": [
+        "GET /dashboard shows all 6 summary sections",
+        "IPP score reflects actual assessment data",
+        "Overdue requests highlighted in red",
+        "Each card links to its respective page",
+        "Dashboard loads in under 2 seconds",
+        "Tests verify dashboard data aggregation"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-005", "TASK-006", "TASK-007", "TASK-008", "TASK-009", "TASK-010"]
+    },
+    {
+      "id": "TASK-012",
+      "title": "PDF Report Generation",
+      "description": "Add PDF export functionality. Create GET /api/reports/compliance-summary that generates a PDF containing: organization details, IPP assessment results (all 11 with status), Privacy Officer details, PIA summary table, data register summary, open requests count, incident summary. Create GET /api/reports/pia/{id} that generates a PDF of a specific PIA. Use a simple HTML-to-PDF approach: render a Jinja2 template to HTML string, then use weasyprint or reportlab to convert to PDF. Return as downloadable file (Content-Disposition: attachment). Write tests verifying PDF generation returns valid response.",
+      "acceptance_criteria": [
+        "GET /api/reports/compliance-summary returns a PDF file",
+        "GET /api/reports/pia/{id} returns a PIA-specific PDF",
+        "PDFs contain correct organization and compliance data",
+        "Response Content-Type is application/pdf",
+        "Tests verify PDF endpoints return 200 with correct content type"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-011"]
+    },
+    {
+      "id": "TASK-013",
+      "title": "Multi-tenant organization support",
+      "description": "Ensure all data queries are scoped to the current user's organization. Add middleware or dependency that injects organization_id into all database queries. Verify that User A from Org 1 cannot see data from Org 2. Add organization settings page at GET /settings showing org name, ABN, industry, and allow edits. Write security tests proving cross-tenant data isolation.",
+      "acceptance_criteria": [
+        "All API endpoints filter data by current user's organization_id",
+        "User from Org A cannot access Org B's PIAs, incidents, or requests",
+        "GET /settings shows organization details",
+        "PUT /api/settings updates organization details",
+        "Security tests verify cross-tenant isolation"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-003"]
+    },
+    {
+      "id": "TASK-014",
+      "title": "Role-based access control",
+      "description": "Implement RBAC with 3 roles: Admin (full access, can designate Privacy Officer, manage users, edit org settings), Privacy Officer (can manage PIAs, handle requests, log incidents, run reports), Staff (read-only dashboard, can submit access requests). Add role checking to protected endpoints. Admin can invite users via POST /api/users/invite (email, role). Add a team management page at GET /settings/team showing all org users with their roles. Write tests for role-based access.",
+      "acceptance_criteria": [
+        "Admin can access all endpoints",
+        "Privacy Officer can manage compliance items but not org settings",
+        "Staff has read-only access to dashboard",
+        "POST /api/users/invite creates a new user with specified role",
+        "GET /settings/team lists all organization users",
+        "Tests verify role-based access restrictions"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-013"]
+    },
+    {
+      "id": "TASK-015",
+      "title": "Onboarding wizard for new CSPs",
+      "description": "After a new organization registers, show a 4-step onboarding wizard at GET /onboarding: Step 1 - Organization details (name, ABN, industry, number of employees), Step 2 - Designate Privacy Officer (select from team or add details), Step 3 - Initial IPP self-assessment (quick yes/no for each of the 11 IPPs), Step 4 - Completion summary with next steps recommendations. Use HTMX for step transitions without page reload. Save progress at each step. Skip wizard on subsequent logins. Write tests.",
+      "acceptance_criteria": [
+        "New users see onboarding wizard after first login",
+        "Wizard has 4 steps navigable via next/back buttons",
+        "Each step saves data to the database",
+        "Completing wizard redirects to dashboard",
+        "Returning users skip the wizard",
+        "Tests verify onboarding flow"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-011"]
+    },
+    {
+      "id": "TASK-016",
+      "title": "Notification and reminder system",
+      "description": "Create src/app/notifications.py with an in-app notification system. Show notification bell icon in the top bar with unread count badge. Notifications for: access/correction requests approaching due date (7 days before), PIAs in review for more than 14 days, IPP assessment items marked non-compliant, breach incidents requiring action. Store notifications in a Notification model (id, user_id, message, link, read boolean, created_at). GET /api/notifications returns unread notifications. POST /api/notifications/{id}/read marks as read. Show notification dropdown on bell click via HTMX. Write tests.",
+      "acceptance_criteria": [
+        "Notification bell shows unread count in top bar",
+        "GET /api/notifications returns list of notifications",
+        "POST /api/notifications/{id}/read marks notification as read",
+        "Notifications created for overdue requests and stale PIAs",
+        "Tests verify notification creation and read status"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-011"]
+    },
+    {
+      "id": "TASK-017",
+      "title": "Audit trail logging",
+      "description": "Add automatic audit trail logging for all compliance-relevant actions. Create a middleware or decorator that logs to the AuditLog model: user_id, action (created/updated/deleted/viewed), entity_type (pia/incident/request/ipp/data_register), entity_id, details (JSON with what changed), timestamp. Create GET /audit-log page showing a filterable, paginated table of all audit events for the organization. Filters: by entity type, by user, by date range. This provides evidence of compliance activities for regulators. Write tests.",
+      "acceptance_criteria": [
+        "Creating/updating/deleting compliance items generates audit entries",
+        "GET /audit-log shows paginated list of audit events",
+        "Filters work for entity type, user, and date range",
+        "Audit entries include user, action, entity, and timestamp",
+        "Tests verify audit entries are created on CRUD operations"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-011"]
+    },
+    {
+      "id": "TASK-018",
+      "title": "Public landing page",
+      "description": "Create a public landing page at GET / (when not authenticated). The page should include: hero section with headline 'PRIS Act Compliance Made Simple' and subheadline 'Help your business comply with WA's new privacy law before July 2026', feature highlights section (6 features with icons using Tailwind heroicons or simple emoji), pricing section ($99/month for up to 5 users, $199/month for unlimited users), FAQ section (What is the PRIS Act? Who needs to comply? What happens if I don't comply? When does it take effect?), call-to-action button linking to /register. Use Tailwind CSS for a clean, professional look. No JavaScript required beyond HTMX.",
+      "acceptance_criteria": [
+        "GET / shows landing page when not authenticated",
+        "Hero section has headline and CTA button",
+        "Feature highlights describe 6 key features",
+        "Pricing section shows two tiers",
+        "FAQ section answers 4 common questions",
+        "CTA links to /register"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-004"]
+    },
+    {
+      "id": "TASK-019",
+      "title": "Docker containerization",
+      "description": "Create Dockerfile using python:3.12-slim base image. Install dependencies from pyproject.toml. Copy src/ directory. Expose port 8000. CMD runs uvicorn src.app.main:app --host 0.0.0.0 --port 8000. Create docker-compose.yml with the web service and a volume for SQLite data persistence. Create .dockerignore excluding .git, __pycache__, .pytest_cache, .venv. Ensure docker build succeeds and the container starts correctly.",
+      "acceptance_criteria": [
+        "Dockerfile builds successfully",
+        "docker-compose up starts the application",
+        "Application accessible at http://localhost:8000",
+        "Health check endpoint responds correctly from container",
+        ".dockerignore excludes unnecessary files"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-001"]
+    },
+    {
+      "id": "TASK-020",
+      "title": "GitHub Actions CI pipeline",
+      "description": "Create .github/workflows/ci.yml that: triggers on push to main and pull requests, sets up Python 3.12, installs dependencies from pyproject.toml, runs pytest with verbose output, fails the build if any test fails. Add a badge to README.md showing CI status.",
+      "acceptance_criteria": [
+        ".github/workflows/ci.yml exists",
+        "Workflow runs pytest on push to main",
+        "Workflow uses Python 3.12",
+        "README.md has CI status badge"
+      ],
+      "status": "pending",
+      "dependencies": ["TASK-001"]
+    }
+  ]
+}
