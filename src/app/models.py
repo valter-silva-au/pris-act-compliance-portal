@@ -1,6 +1,6 @@
 """SQLAlchemy ORM models for WA PRIS Act Compliance Portal."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Date, ForeignKey, Enum, JSON
 )
@@ -8,6 +8,11 @@ from sqlalchemy.orm import relationship
 import enum
 
 from src.app.database import Base
+
+
+def utc_now():
+    """Return current UTC time as timezone-aware datetime."""
+    return datetime.now(timezone.utc)
 
 
 # Enums for various status and type fields
@@ -66,7 +71,7 @@ class Organization(Base):
     name = Column(String(255), nullable=False)
     abn = Column(String(50), unique=True, nullable=False)
     industry = Column(String(255))
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     # Relationships
     users = relationship("User", back_populates="organization")
@@ -122,8 +127,8 @@ class PIA(Base):
     risk_level = Column(Enum(RiskLevel), nullable=False)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     # Relationships
     organization = relationship("Organization", back_populates="pias")
@@ -159,7 +164,7 @@ class AccessRequest(Base):
     status = Column(Enum(AccessRequestStatus), nullable=False, default=AccessRequestStatus.RECEIVED)
     due_date = Column(Date)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     # Relationships
     organization = relationship("Organization", back_populates="access_requests")
@@ -179,7 +184,7 @@ class BreachIncident(Base):
     containment_actions = Column(Text)
     status = Column(Enum(BreachIncidentStatus), nullable=False, default=BreachIncidentStatus.DETECTED)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=utc_now)
 
     # Relationships
     organization = relationship("Organization", back_populates="breach_incidents")
@@ -195,7 +200,7 @@ class IPPAssessment(Base):
     compliance_status = Column(Enum(ComplianceStatus), nullable=False, default=ComplianceStatus.NOT_ASSESSED)
     evidence_notes = Column(Text)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     # Relationships
     organization = relationship("Organization", back_populates="ipp_assessments")
@@ -211,7 +216,7 @@ class AuditLog(Base):
     entity_type = Column(String(100))
     entity_id = Column(Integer)
     details = Column(JSON)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime, default=utc_now, index=True)
 
     # Relationships
     user = relationship("User", back_populates="audit_logs")
