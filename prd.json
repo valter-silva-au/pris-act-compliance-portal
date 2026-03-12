@@ -13,7 +13,7 @@
         "GET /health returns {\"status\": \"ok\"} with 200",
         "pytest runs with 0 errors"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": []
     },
     {
