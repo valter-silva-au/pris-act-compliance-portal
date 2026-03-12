@@ -73,7 +73,7 @@
         "Overall compliance score updates when individual IPPs change",
         "Tests verify save and retrieval of IPP assessments"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-004"
       ]
