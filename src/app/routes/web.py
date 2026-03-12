@@ -15,8 +15,9 @@ from src.app.auth import (
     get_user_by_email,
 )
 from src.app.database import get_db
-from src.app.models import Organization, User, PrivacyOfficer
+from src.app.models import Organization, User, PrivacyOfficer, PIA, PIAStatus, RiskLevel
 from datetime import date
+import json
 
 # Create router for web pages
 router = APIRouter(tags=["web"])
@@ -375,3 +376,295 @@ async def designate_privacy_officer(
 
     # Redirect back to the privacy officer page
     return RedirectResponse(url="/privacy-officer", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/pias", response_class=HTMLResponse)
+async def pias_list(request: Request, db: Session = Depends(get_db)):
+    """
+    Display list of all PIAs.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+
+    Returns:
+        HTMLResponse: Rendered PIAs list page or redirect to login
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get all PIAs for the organization
+    pias = db.query(PIA).filter(
+        PIA.organization_id == user.organization_id
+    ).order_by(PIA.created_at.desc()).all()
+
+    return templates.TemplateResponse(
+        "pias_list.html",
+        {
+            "request": request,
+            "user": user,
+            "pias": pias
+        }
+    )
+
+
+@router.get("/pias/new", response_class=HTMLResponse)
+async def pias_new(request: Request, db: Session = Depends(get_db)):
+    """
+    Display PIA creation form.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+
+    Returns:
+        HTMLResponse: Rendered PIA creation form or redirect to login
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    return templates.TemplateResponse(
+        "pias_new.html",
+        {
+            "request": request,
+            "user": user
+        }
+    )
+
+
+@router.get("/pias/{pia_id}", response_class=HTMLResponse)
+async def pias_detail(request: Request, pia_id: int, db: Session = Depends(get_db)):
+    """
+    Display PIA detail page with edit capability.
+
+    Args:
+        request: FastAPI request object
+        pia_id: PIA ID
+        db: Database session
+
+    Returns:
+        HTMLResponse: Rendered PIA detail page or redirect to login
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get the PIA
+    pia = db.query(PIA).filter(
+        PIA.id == pia_id,
+        PIA.organization_id == user.organization_id
+    ).first()
+
+    if not pia:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="PIA not found"
+        )
+
+    return templates.TemplateResponse(
+        "pias_detail.html",
+        {
+            "request": request,
+            "user": user,
+            "pia": pia
+        }
+    )
+
+
+@router.post("/api/pias", response_class=RedirectResponse)
+async def create_pia(
+    request: Request,
+    title: str = Form(...),
+    description: str = Form(...),
+    data_types_names: bool = Form(False),
+    data_types_addresses: bool = Form(False),
+    data_types_health: bool = Form(False),
+    data_types_financial: bool = Form(False),
+    data_types_gov_ids: bool = Form(False),
+    data_types_other: bool = Form(False),
+    data_flow_description: str = Form(...),
+    risk_level: str = Form(...),
+    mitigation_measures: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new PIA in draft status.
+
+    Args:
+        request: FastAPI request object
+        title: PIA title
+        description: Project/initiative description
+        data_types_*: Checkboxes for data types involved
+        data_flow_description: Description of data flow
+        risk_level: Risk level assessment
+        mitigation_measures: Mitigation measures
+        db: Database session
+
+    Returns:
+        RedirectResponse: Redirect to PIAs list page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Build data_types JSON
+    data_types = {
+        "names": data_types_names,
+        "addresses": data_types_addresses,
+        "health_info": data_types_health,
+        "financial": data_types_financial,
+        "government_ids": data_types_gov_ids,
+        "other": data_types_other
+    }
+
+    # Create new PIA
+    new_pia = PIA(
+        title=title,
+        description=description,
+        data_types=data_types,
+        data_flow_description=data_flow_description,
+        risk_level=RiskLevel(risk_level),
+        mitigation_measures=mitigation_measures,
+        status=PIAStatus.DRAFT,
+        organization_id=user.organization_id,
+        created_by=user.id
+    )
+    db.add(new_pia)
+    db.commit()
+
+    # Redirect to PIAs list
+    return RedirectResponse(url="/pias", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.put("/api/pias/{pia_id}", response_class=RedirectResponse)
+@router.post("/api/pias/{pia_id}", response_class=RedirectResponse)  # HTML forms only support POST
+async def update_pia(
+    request: Request,
+    pia_id: int,
+    title: str = Form(...),
+    description: str = Form(...),
+    data_types_names: bool = Form(False),
+    data_types_addresses: bool = Form(False),
+    data_types_health: bool = Form(False),
+    data_types_financial: bool = Form(False),
+    data_types_gov_ids: bool = Form(False),
+    data_types_other: bool = Form(False),
+    data_flow_description: str = Form(...),
+    risk_level: str = Form(...),
+    mitigation_measures: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Update PIA fields.
+
+    Args:
+        request: FastAPI request object
+        pia_id: PIA ID
+        title: PIA title
+        description: Project/initiative description
+        data_types_*: Checkboxes for data types involved
+        data_flow_description: Description of data flow
+        risk_level: Risk level assessment
+        mitigation_measures: Mitigation measures
+        db: Database session
+
+    Returns:
+        RedirectResponse: Redirect to PIA detail page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get the PIA
+    pia = db.query(PIA).filter(
+        PIA.id == pia_id,
+        PIA.organization_id == user.organization_id
+    ).first()
+
+    if not pia:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="PIA not found"
+        )
+
+    # Build data_types JSON
+    data_types = {
+        "names": data_types_names,
+        "addresses": data_types_addresses,
+        "health_info": data_types_health,
+        "financial": data_types_financial,
+        "government_ids": data_types_gov_ids,
+        "other": data_types_other
+    }
+
+    # Update PIA fields
+    pia.title = title
+    pia.description = description
+    pia.data_types = data_types
+    pia.data_flow_description = data_flow_description
+    pia.risk_level = RiskLevel(risk_level)
+    pia.mitigation_measures = mitigation_measures
+
+    db.commit()
+
+    # Redirect to PIA detail page
+    return RedirectResponse(url=f"/pias/{pia_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.patch("/api/pias/{pia_id}/status")
+async def update_pia_status(
+    request: Request,
+    pia_id: int,
+    status_value: str = Form(..., alias="status"),
+    db: Session = Depends(get_db)
+):
+    """
+    Transition PIA status via HTMX.
+
+    Args:
+        request: FastAPI request object
+        pia_id: PIA ID
+        status_value: New status value
+        db: Database session
+
+    Returns:
+        dict: Updated PIA status information for HTMX response
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+
+    # Get the PIA
+    pia = db.query(PIA).filter(
+        PIA.id == pia_id,
+        PIA.organization_id == user.organization_id
+    ).first()
+
+    if not pia:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="PIA not found"
+        )
+
+    # Update status
+    pia.status = PIAStatus(status_value)
+    db.commit()
+
+    # Return the updated status HTML fragment
+    status_badges = {
+        "draft": "bg-gray-100 text-gray-800",
+        "in_review": "bg-blue-100 text-blue-800",
+        "approved": "bg-green-100 text-green-800",
+        "rejected": "bg-red-100 text-red-800"
+    }
+    badge_class = status_badges.get(pia.status.value, "bg-gray-100 text-gray-800")
+
+    return {
+        "status": pia.status.value,
+        "badge_html": f'<span class="px-2 py-1 text-xs font-semibold rounded-full {badge_class}">{pia.status.value.replace("_", " ").title()}</span>'
+    }

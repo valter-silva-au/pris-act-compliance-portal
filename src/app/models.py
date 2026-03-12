@@ -122,9 +122,12 @@ class PIA(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    description = Column(Text)
-    status = Column(Enum(PIAStatus), nullable=False, default=PIAStatus.DRAFT)
+    description = Column(Text)  # project/initiative description
+    data_types = Column(JSON)  # checkboxes: names, addresses, health_info, financial, government_ids, other
+    data_flow_description = Column(Text)
     risk_level = Column(Enum(RiskLevel), nullable=False)
+    mitigation_measures = Column(Text)
+    status = Column(Enum(PIAStatus), nullable=False, default=PIAStatus.DRAFT)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=utc_now)

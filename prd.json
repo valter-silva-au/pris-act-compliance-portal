@@ -106,7 +106,7 @@
         "PATCH /api/pias/{id}/status transitions PIA status",
         "Tests verify CRUD and status transitions"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-004"
       ]
