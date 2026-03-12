@@ -15,7 +15,8 @@ from src.app.auth import (
     get_user_by_email,
 )
 from src.app.database import get_db
-from src.app.models import Organization, User
+from src.app.models import Organization, User, PrivacyOfficer
+from datetime import date
 
 # Create router for web pages
 router = APIRouter(tags=["web"])
@@ -239,3 +240,138 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
         "dashboard.html",
         {"request": request, "user": user}
     )
+
+
+@router.get("/privacy-officer", response_class=HTMLResponse)
+async def privacy_officer_page(request: Request, db: Session = Depends(get_db)):
+    """
+    Display the Privacy Officer page.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+
+    Returns:
+        HTMLResponse: Rendered privacy officer page or redirect to login
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get current privacy officer for the organization
+    officer = db.query(PrivacyOfficer).filter(
+        PrivacyOfficer.organization_id == user.organization_id
+    ).first()
+
+    # Get all users in the organization for the dropdown
+    org_users = db.query(User).filter(
+        User.organization_id == user.organization_id
+    ).all()
+
+    return templates.TemplateResponse(
+        "privacy_officer.html",
+        {
+            "request": request,
+            "user": user,
+            "officer": officer,
+            "org_users": org_users
+        }
+    )
+
+
+@router.post("/api/privacy-officer", response_class=HTMLResponse)
+async def designate_privacy_officer(
+    request: Request,
+    user_id: int = Form(...),
+    contact_phone: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Designate or update the Privacy Officer.
+
+    Args:
+        request: FastAPI request object
+        user_id: ID of the user to designate as privacy officer
+        contact_phone: Optional contact phone number
+        db: Database session
+
+    Returns:
+        HTMLResponse: Redirect to privacy officer page or error
+    """
+    current_user = get_current_user_from_cookie(request, db)
+    if not current_user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Check if user is admin
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can designate privacy officers"
+        )
+
+    # Verify the selected user exists and belongs to the same organization
+    selected_user = db.query(User).filter(User.id == user_id).first()
+    if not selected_user:
+        # Get org users for re-rendering
+        org_users = db.query(User).filter(
+            User.organization_id == current_user.organization_id
+        ).all()
+        officer = db.query(PrivacyOfficer).filter(
+            PrivacyOfficer.organization_id == current_user.organization_id
+        ).first()
+        return templates.TemplateResponse(
+            "privacy_officer.html",
+            {
+                "request": request,
+                "user": current_user,
+                "officer": officer,
+                "org_users": org_users,
+                "error": "Selected user not found"
+            },
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+    if selected_user.organization_id != current_user.organization_id:
+        # Get org users for re-rendering
+        org_users = db.query(User).filter(
+            User.organization_id == current_user.organization_id
+        ).all()
+        officer = db.query(PrivacyOfficer).filter(
+            PrivacyOfficer.organization_id == current_user.organization_id
+        ).first()
+        return templates.TemplateResponse(
+            "privacy_officer.html",
+            {
+                "request": request,
+                "user": current_user,
+                "officer": officer,
+                "org_users": org_users,
+                "error": "Selected user does not belong to your organization"
+            },
+            status_code=status.HTTP_403_FORBIDDEN
+        )
+
+    # Check if there's an existing privacy officer
+    existing_officer = db.query(PrivacyOfficer).filter(
+        PrivacyOfficer.organization_id == current_user.organization_id
+    ).first()
+
+    if existing_officer:
+        # Update existing officer
+        existing_officer.user_id = user_id
+        existing_officer.designation_date = date.today()
+        existing_officer.contact_phone = contact_phone
+    else:
+        # Create new privacy officer
+        new_officer = PrivacyOfficer(
+            user_id=user_id,
+            organization_id=current_user.organization_id,
+            designation_date=date.today(),
+            contact_phone=contact_phone
+        )
+        db.add(new_officer)
+
+    db.commit()
+
+    # Redirect back to the privacy officer page
+    return RedirectResponse(url="/privacy-officer", status_code=status.HTTP_303_SEE_OTHER)

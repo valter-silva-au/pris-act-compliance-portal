@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Officer - WA PRIS Act Compliance Portal{% endblock %}
+
+{% block page_title %}Privacy Officer{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl">
+    <!-- Introduction -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                    <strong>PRIS Act Requirement:</strong> Under the WA Privacy and Responsible Information Sharing Act,
+                    every Cloud Service Provider (CSP) must designate a Privacy Officer responsible for ensuring compliance
+                    with privacy obligations.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {% if officer %}
+    <!-- Current Privacy Officer -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Current Privacy Officer</h3>
+        </div>
+        <div class="px-6 py-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <p class="text-gray-900">{{ officer.user.full_name }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <p class="text-gray-900">{{ officer.user.email }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <p class="text-gray-900">{{ officer.contact_phone or 'Not provided' }}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Designation Date</label>
+                    <p class="text-gray-900">{{ officer.designation_date.strftime('%d %B %Y') }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- No Privacy Officer Designated -->
+    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <div class="ml-3">
+                <p class="text-sm text-yellow-700">
+                    <strong>Action Required:</strong> No Privacy Officer has been designated for your organization.
+                    Please designate a Privacy Officer to ensure compliance with the PRIS Act.
+                </p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Privacy Officer Responsibilities -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Privacy Officer Responsibilities</h3>
+        </div>
+        <div class="px-6 py-4">
+            <ul class="space-y-3">
+                <li class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-gray-700">Handle privacy complaints and inquiries from individuals</span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-gray-700">Oversee and coordinate Privacy Impact Assessments (PIAs)</span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-gray-700">Manage privacy breach response and reporting</span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-gray-700">Ensure compliance with all Information Privacy Principles (IPPs)</span>
+                </li>
+                <li class="flex items-start">
+                    <svg class="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="text-gray-700">Provide privacy training and guidance to staff</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    {% if user.role == 'admin' %}
+    <!-- Designate/Change Privacy Officer Form -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">
+                {% if officer %}Change{% else %}Designate{% endif %} Privacy Officer
+            </h3>
+        </div>
+        <div class="px-6 py-4">
+            {% if error %}
+            <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+                <p class="text-sm text-red-700">{{ error }}</p>
+            </div>
+            {% endif %}
+
+            <form action="/api/privacy-officer" method="POST" class="space-y-4">
+                <div>
+                    <label for="user_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Select User from Organization
+                    </label>
+                    <select
+                        id="user_id"
+                        name="user_id"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                        <option value="">-- Select a user --</option>
+                        {% for org_user in org_users %}
+                        <option value="{{ org_user.id }}">{{ org_user.full_name }} ({{ org_user.email }})</option>
+                        {% endfor %}
+                    </select>
+                    <p class="mt-1 text-sm text-gray-500">Select an existing user from your organization</p>
+                </div>
+
+                <div>
+                    <label for="contact_phone" class="block text-sm font-medium text-gray-700 mb-1">
+                        Contact Phone <span class="text-gray-500">(Optional)</span>
+                    </label>
+                    <input
+                        type="tel"
+                        id="contact_phone"
+                        name="contact_phone"
+                        placeholder="+61 x xxxx xxxx"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                </div>
+
+                <div class="pt-4">
+                    <button
+                        type="submit"
+                        class="w-full px-6 py-3 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 transition focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    >
+                        {% if officer %}Update{% else %}Designate{% endif %} Privacy Officer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <!-- Non-admin message -->
+    <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+        <p class="text-gray-700">
+            Only administrators can designate or change the Privacy Officer.
+            Please contact your organization's administrator for assistance.
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
