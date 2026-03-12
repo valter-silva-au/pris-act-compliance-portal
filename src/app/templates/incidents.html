@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+
+{% block title %}Breach Incidents - WA PRIS Act Compliance Portal{% endblock %}
+
+{% block page_title %}Breach Incident Logger{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900">Incident Management</h3>
+            <p class="text-sm text-gray-600 mt-1">Track and manage data breach incidents (mandatory notification from Jan 1, 2027)</p>
+        </div>
+        <button onclick="openAddModal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+            + Log New Incident
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-4 flex gap-4">
+        <div>
+            <label for="severityFilter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Severity</label>
+            <select id="severityFilter" onchange="filterIncidents()" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Severities</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+            </select>
+        </div>
+        <div>
+            <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+            <select id="statusFilter" onchange="filterIncidents()" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Statuses</option>
+                <option value="detected">Detected</option>
+                <option value="investigating">Investigating</option>
+                <option value="contained">Contained</option>
+                <option value="resolved">Resolved</option>
+                <option value="reported">Reported</option>
+            </select>
+        </div>
+    </div>
+
+    {% if incidents %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Incident Title
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Severity
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date Discovered
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Affected Records
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for incident in incidents %}
+                <tr class="hover:bg-gray-50 incident-row" data-severity="{{ incident.severity.value }}" data-status="{{ incident.status.value }}">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <button onclick="toggleDetails('details-{{ incident.id }}')" class="mr-2 text-gray-500 hover:text-gray-700">
+                                <svg id="icon-{{ incident.id }}" class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                            <div class="text-sm font-medium text-gray-900">{{ incident.title }}</div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if incident.severity.value == 'low' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Low</span>
+                        {% elif incident.severity.value == 'medium' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Medium</span>
+                        {% elif incident.severity.value == 'high' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">High</span>
+                        {% elif incident.severity.value == 'critical' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Critical</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if incident.status.value == 'detected' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Detected</span>
+                        {% elif incident.status.value == 'investigating' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Investigating</span>
+                        {% elif incident.status.value == 'contained' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">Contained</span>
+                        {% elif incident.status.value == 'resolved' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Resolved</span>
+                        {% elif incident.status.value == 'reported' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">Reported</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ incident.date_discovered.strftime('%Y-%m-%d') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {% if incident.affected_records_count %}
+                            {{ incident.affected_records_count }}
+                        {% else %}
+                            <span class="text-gray-500 italic">Unknown</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="openEditModal({{ incident.id }})" class="text-blue-600 hover:text-blue-900">
+                            Edit
+                        </button>
+                    </td>
+                </tr>
+                <tr id="details-{{ incident.id }}" class="hidden bg-gray-50">
+                    <td colspan="6" class="px-6 py-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Incident Description</h4>
+                                <p class="text-sm text-gray-600">{{ incident.description or 'No description provided' }}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Data Types Affected</h4>
+                                {% if incident.data_types_affected %}
+                                <div class="text-sm text-gray-600">
+                                    {% if incident.data_types_affected.names %}<span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs mr-1 mb-1">Names</span>{% endif %}
+                                    {% if incident.data_types_affected.addresses %}<span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs mr-1 mb-1">Addresses</span>{% endif %}
+                                    {% if incident.data_types_affected.health_info %}<span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs mr-1 mb-1">Health Info</span>{% endif %}
+                                    {% if incident.data_types_affected.financial %}<span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs mr-1 mb-1">Financial</span>{% endif %}
+                                    {% if incident.data_types_affected.government_ids %}<span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs mr-1 mb-1">Government IDs</span>{% endif %}
+                                    {% if incident.data_types_affected.other %}<span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs mr-1 mb-1">Other</span>{% endif %}
+                                </div>
+                                {% else %}
+                                <p class="text-sm text-gray-600">Not specified</p>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Notification Details</h4>
+                                {% if incident.notification_date %}
+                                <p class="text-sm text-gray-600">
+                                    Notified: {{ incident.notification_date.strftime('%Y-%m-%d') }}<br>
+                                    Authority: {{ incident.authority_notified or 'Not specified' }}
+                                </p>
+                                {% else %}
+                                <p class="text-sm text-gray-600">Not yet notified</p>
+                                {% endif %}
+                            </div>
+                            <div class="col-span-2">
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Containment Actions</h4>
+                                <p class="text-sm text-gray-600">{{ incident.containment_actions or 'No containment actions documented' }}</p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No Incidents Logged</h3>
+        <p class="mt-1 text-sm text-gray-500">No breach incidents have been logged yet.</p>
+        <div class="mt-6">
+            <button onclick="openAddModal()" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                + Log New Incident
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-yellow-700">
+                <strong>Mandatory Breach Notification:</strong> From January 1, 2027, CSPs must notify the Commissioner and affected individuals of eligible data breaches within a reasonable time. Use this tracker to document incidents and manage notification obligations.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="incidentModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-10 mx-auto p-5 border w-2/3 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="modalTitle" class="text-lg font-semibold text-gray-900">Log New Incident</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <form id="incidentForm" method="post" action="/api/incidents">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Incident Title *</label>
+                    <input type="text" id="title" name="title" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Brief title describing the incident">
+                </div>
+
+                <div>
+                    <label for="severity" class="block text-sm font-medium text-gray-700 mb-1">Severity *</label>
+                    <select id="severity" name="severity" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select severity...</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="date_discovered" class="block text-sm font-medium text-gray-700 mb-1">Date Discovered *</label>
+                    <input type="date" id="date_discovered" name="date_discovered" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description of What Happened</label>
+                    <textarea id="description" name="description" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Describe what happened, how the breach occurred, and what data was affected"></textarea>
+                </div>
+
+                <div>
+                    <label for="affected_records_count" class="block text-sm font-medium text-gray-700 mb-1">Affected Records (estimated)</label>
+                    <input type="number" id="affected_records_count" name="affected_records_count" min="0"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Number of records">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Types of Data Affected</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="data_types_names" name="data_types_names" class="mr-2">
+                            <span class="text-sm text-gray-700">Names</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="data_types_addresses" name="data_types_addresses" class="mr-2">
+                            <span class="text-sm text-gray-700">Addresses</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="data_types_health" name="data_types_health" class="mr-2">
+                            <span class="text-sm text-gray-700">Health Information</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">&nbsp;</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="data_types_financial" name="data_types_financial" class="mr-2">
+                            <span class="text-sm text-gray-700">Financial Information</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="data_types_gov_ids" name="data_types_gov_ids" class="mr-2">
+                            <span class="text-sm text-gray-700">Government IDs</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="checkbox" id="data_types_other" name="data_types_other" class="mr-2">
+                            <span class="text-sm text-gray-700">Other</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-span-2">
+                    <label for="containment_actions" class="block text-sm font-medium text-gray-700 mb-1">Containment Actions Taken</label>
+                    <textarea id="containment_actions" name="containment_actions" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Describe actions taken to contain and remediate the breach"></textarea>
+                </div>
+
+                <!-- These fields only show in edit mode -->
+                <div id="statusField" class="hidden">
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select id="status" name="status"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="detected">Detected</option>
+                        <option value="investigating">Investigating</option>
+                        <option value="contained">Contained</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="reported">Reported</option>
+                    </select>
+                </div>
+
+                <div id="notificationDateField" class="hidden">
+                    <label for="notification_date" class="block text-sm font-medium text-gray-700 mb-1">Date Authority Notified</label>
+                    <input type="date" id="notification_date" name="notification_date"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div id="authorityNotifiedField" class="col-span-2 hidden">
+                    <label for="authority_notified" class="block text-sm font-medium text-gray-700 mb-1">Authority Notified</label>
+                    <input type="text" id="authority_notified" name="authority_notified"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="e.g., WA Privacy Commissioner, OAIC">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                    Save Incident
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let incidents = [
+    {% for incident in incidents %}
+    {
+        id: {{ incident.id }},
+        title: {{ incident.title | tojson }},
+        description: {{ incident.description | tojson }},
+        severity: {{ incident.severity.value | tojson }},
+        date_discovered: {{ incident.date_discovered.isoformat() | tojson }},
+        affected_records_count: {{ incident.affected_records_count | tojson }},
+        data_types_affected: {{ incident.data_types_affected | tojson }},
+        containment_actions: {{ incident.containment_actions | tojson }},
+        status: {{ incident.status.value | tojson }},
+        notification_date: {{ incident.notification_date.isoformat() if incident.notification_date else 'null' }},
+        authority_notified: {{ incident.authority_notified | tojson }}
+    }{{ ',' if not loop.last else '' }}
+    {% endfor %}
+];
+
+function toggleDetails(id) {
+    const detailsRow = document.getElementById(id);
+    const iconId = id.replace('details-', 'icon-');
+    const icon = document.getElementById(iconId);
+
+    if (detailsRow.classList.contains('hidden')) {
+        detailsRow.classList.remove('hidden');
+        icon.classList.add('rotate-90');
+    } else {
+        detailsRow.classList.add('hidden');
+        icon.classList.remove('rotate-90');
+    }
+}
+
+function openAddModal() {
+    document.getElementById('modalTitle').textContent = 'Log New Incident';
+    document.getElementById('incidentForm').action = '/api/incidents';
+    document.getElementById('incidentForm').reset();
+
+    // Hide edit-only fields
+    document.getElementById('statusField').classList.add('hidden');
+    document.getElementById('notificationDateField').classList.add('hidden');
+    document.getElementById('authorityNotifiedField').classList.add('hidden');
+
+    document.getElementById('incidentModal').classList.remove('hidden');
+}
+
+function openEditModal(id) {
+    const incident = incidents.find(i => i.id === id);
+    if (!incident) return;
+
+    document.getElementById('modalTitle').textContent = 'Edit Incident';
+    document.getElementById('incidentForm').action = '/api/incidents/' + id;
+
+    document.getElementById('title').value = incident.title;
+    document.getElementById('description').value = incident.description || '';
+    document.getElementById('severity').value = incident.severity;
+    document.getElementById('date_discovered').value = incident.date_discovered.split('T')[0];
+    document.getElementById('affected_records_count').value = incident.affected_records_count || '';
+    document.getElementById('containment_actions').value = incident.containment_actions || '';
+    document.getElementById('status').value = incident.status;
+    document.getElementById('notification_date').value = incident.notification_date ? incident.notification_date.split('T')[0] : '';
+    document.getElementById('authority_notified').value = incident.authority_notified || '';
+
+    // Set checkboxes
+    if (incident.data_types_affected) {
+        document.getElementById('data_types_names').checked = incident.data_types_affected.names || false;
+        document.getElementById('data_types_addresses').checked = incident.data_types_affected.addresses || false;
+        document.getElementById('data_types_health').checked = incident.data_types_affected.health_info || false;
+        document.getElementById('data_types_financial').checked = incident.data_types_affected.financial || false;
+        document.getElementById('data_types_gov_ids').checked = incident.data_types_affected.government_ids || false;
+        document.getElementById('data_types_other').checked = incident.data_types_affected.other || false;
+    }
+
+    // Show edit-only fields
+    document.getElementById('statusField').classList.remove('hidden');
+    document.getElementById('notificationDateField').classList.remove('hidden');
+    document.getElementById('authorityNotifiedField').classList.remove('hidden');
+
+    document.getElementById('incidentModal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('incidentModal').classList.add('hidden');
+}
+
+function filterIncidents() {
+    const severityFilter = document.getElementById('severityFilter').value.toLowerCase();
+    const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+    const rows = document.querySelectorAll('.incident-row');
+
+    rows.forEach(row => {
+        const severity = row.dataset.severity;
+        const status = row.dataset.status;
+
+        const severityMatch = !severityFilter || severity === severityFilter;
+        const statusMatch = !statusFilter || status === statusFilter;
+
+        if (severityMatch && statusMatch) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+            // Also hide the corresponding details row
+            const detailsRow = document.getElementById('details-' + row.querySelector('[id^="icon-"]').id.replace('icon-', ''));
+            if (detailsRow) {
+                detailsRow.style.display = 'none';
+            }
+        }
+    });
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('incidentModal');
+    if (event.target === modal) {
+        closeModal();
+    }
+}
+</script>
+{% endblock %}

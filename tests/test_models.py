@@ -214,10 +214,12 @@ def test_breach_incident_creation(test_db):
         description="Unauthorized access detected",
         severity=RiskLevel.HIGH,
         date_discovered=datetime(2024, 3, 1, 10, 30),
-        date_reported=datetime(2024, 3, 2, 9, 0),
         affected_records_count=150,
+        data_types_affected={"names": True, "addresses": True, "health_info": False, "financial": False, "government_ids": False, "other": False},
         containment_actions="Disabled compromised accounts",
         status=BreachIncidentStatus.INVESTIGATING,
+        notification_date=datetime(2024, 3, 2, 9, 0),
+        authority_notified="WA Privacy Commissioner",
         organization_id=org.id
     )
     test_db.add(incident)

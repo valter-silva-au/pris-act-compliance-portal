@@ -155,7 +155,7 @@
         "Severity levels have distinct visual indicators (red/orange/yellow/blue)",
         "Tests verify CRUD and status transitions"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-004"
       ]

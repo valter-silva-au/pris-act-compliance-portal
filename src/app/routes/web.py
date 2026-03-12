@@ -17,7 +17,7 @@ from src.app.auth import (
 from src.app.database import get_db
 from src.app.models import (
     Organization, User, PrivacyOfficer, PIA, PIAStatus, RiskLevel, DataRegister,
-    AccessRequest, RequestType, AccessRequestStatus
+    AccessRequest, RequestType, AccessRequestStatus, BreachIncident, BreachIncidentStatus
 )
 from datetime import date, timedelta
 import json
@@ -1034,3 +1034,313 @@ async def update_request(
     db.commit()
 
     return RedirectResponse(url="/requests", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/incidents", response_class=HTMLResponse)
+async def incidents_list(request: Request, db: Session = Depends(get_db)):
+    """
+    Display list of all breach incidents with severity color coding.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+
+    Returns:
+        HTMLResponse: Rendered incidents list page or redirect to login
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get all incidents for the organization
+    incidents = db.query(BreachIncident).filter(
+        BreachIncident.organization_id == user.organization_id
+    ).order_by(BreachIncident.created_at.desc()).all()
+
+    return templates.TemplateResponse(
+        "incidents.html",
+        {
+            "request": request,
+            "user": user,
+            "incidents": incidents
+        }
+    )
+
+
+@router.get("/incidents/{incident_id}", response_class=HTMLResponse)
+async def incidents_detail(request: Request, incident_id: int, db: Session = Depends(get_db)):
+    """
+    Display incident detail page with timeline.
+
+    Args:
+        request: FastAPI request object
+        incident_id: Incident ID
+        db: Database session
+
+    Returns:
+        HTMLResponse: Rendered incident detail page or redirect to login
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get the incident
+    incident = db.query(BreachIncident).filter(
+        BreachIncident.id == incident_id,
+        BreachIncident.organization_id == user.organization_id
+    ).first()
+
+    if not incident:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Incident not found"
+        )
+
+    return templates.TemplateResponse(
+        "incidents_detail.html",
+        {
+            "request": request,
+            "user": user,
+            "incident": incident
+        }
+    )
+
+
+@router.post("/api/incidents", response_class=RedirectResponse)
+async def create_incident(
+    request: Request,
+    title: str = Form(...),
+    description: str = Form(""),
+    severity: str = Form(...),
+    date_discovered: str = Form(...),
+    affected_records_count: int = Form(None),
+    data_types_names: bool = Form(False),
+    data_types_addresses: bool = Form(False),
+    data_types_health: bool = Form(False),
+    data_types_financial: bool = Form(False),
+    data_types_gov_ids: bool = Form(False),
+    data_types_other: bool = Form(False),
+    containment_actions: str = Form(""),
+    notification_date: str = Form(None),
+    authority_notified: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new breach incident.
+
+    Args:
+        request: FastAPI request object
+        title: Incident title
+        description: Description of what happened
+        severity: Severity level (low/medium/high/critical)
+        date_discovered: Date the breach was discovered
+        affected_records_count: Number of affected records
+        data_types_*: Checkboxes for data types affected
+        containment_actions: Actions taken to contain the breach
+        notification_date: Date authority was notified
+        authority_notified: Which authority was notified
+        db: Database session
+
+    Returns:
+        RedirectResponse: Redirect to incidents list page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Parse date_discovered
+    from datetime import datetime
+    parsed_date_discovered = datetime.strptime(date_discovered, "%Y-%m-%d")
+
+    # Parse notification_date if provided
+    parsed_notification_date = None
+    if notification_date:
+        try:
+            parsed_notification_date = datetime.strptime(notification_date, "%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Build data_types_affected JSON
+    data_types = {
+        "names": data_types_names,
+        "addresses": data_types_addresses,
+        "health_info": data_types_health,
+        "financial": data_types_financial,
+        "government_ids": data_types_gov_ids,
+        "other": data_types_other
+    }
+
+    # Create new incident
+    new_incident = BreachIncident(
+        title=title,
+        description=description if description else None,
+        severity=RiskLevel(severity),
+        date_discovered=parsed_date_discovered,
+        affected_records_count=affected_records_count,
+        data_types_affected=data_types,
+        containment_actions=containment_actions if containment_actions else None,
+        status=BreachIncidentStatus.DETECTED,
+        notification_date=parsed_notification_date,
+        authority_notified=authority_notified if authority_notified else None,
+        organization_id=user.organization_id
+    )
+    db.add(new_incident)
+    db.commit()
+
+    return RedirectResponse(url="/incidents", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.put("/api/incidents/{incident_id}", response_class=RedirectResponse)
+@router.post("/api/incidents/{incident_id}", response_class=RedirectResponse)  # HTML forms only support POST
+async def update_incident(
+    request: Request,
+    incident_id: int,
+    title: str = Form(...),
+    description: str = Form(""),
+    severity: str = Form(...),
+    date_discovered: str = Form(...),
+    affected_records_count: int = Form(None),
+    data_types_names: bool = Form(False),
+    data_types_addresses: bool = Form(False),
+    data_types_health: bool = Form(False),
+    data_types_financial: bool = Form(False),
+    data_types_gov_ids: bool = Form(False),
+    data_types_other: bool = Form(False),
+    containment_actions: str = Form(""),
+    status_value: str = Form(..., alias="status"),
+    notification_date: str = Form(None),
+    authority_notified: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    """
+    Update breach incident details.
+
+    Args:
+        request: FastAPI request object
+        incident_id: Incident ID
+        title: Incident title
+        description: Description of what happened
+        severity: Severity level (low/medium/high/critical)
+        date_discovered: Date the breach was discovered
+        affected_records_count: Number of affected records
+        data_types_*: Checkboxes for data types affected
+        containment_actions: Actions taken to contain the breach
+        status_value: Incident status
+        notification_date: Date authority was notified
+        authority_notified: Which authority was notified
+        db: Database session
+
+    Returns:
+        RedirectResponse: Redirect to incidents list page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get the incident
+    incident = db.query(BreachIncident).filter(
+        BreachIncident.id == incident_id,
+        BreachIncident.organization_id == user.organization_id
+    ).first()
+
+    if not incident:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Incident not found"
+        )
+
+    # Parse date_discovered
+    from datetime import datetime
+    parsed_date_discovered = datetime.strptime(date_discovered, "%Y-%m-%d")
+
+    # Parse notification_date if provided
+    parsed_notification_date = None
+    if notification_date:
+        try:
+            parsed_notification_date = datetime.strptime(notification_date, "%Y-%m-%d")
+        except ValueError:
+            pass
+
+    # Build data_types_affected JSON
+    data_types = {
+        "names": data_types_names,
+        "addresses": data_types_addresses,
+        "health_info": data_types_health,
+        "financial": data_types_financial,
+        "government_ids": data_types_gov_ids,
+        "other": data_types_other
+    }
+
+    # Update incident fields
+    incident.title = title
+    incident.description = description if description else None
+    incident.severity = RiskLevel(severity)
+    incident.date_discovered = parsed_date_discovered
+    incident.affected_records_count = affected_records_count
+    incident.data_types_affected = data_types
+    incident.containment_actions = containment_actions if containment_actions else None
+    incident.status = BreachIncidentStatus(status_value)
+    incident.notification_date = parsed_notification_date
+    incident.authority_notified = authority_notified if authority_notified else None
+
+    db.commit()
+
+    return RedirectResponse(url=f"/incidents/{incident_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.patch("/api/incidents/{incident_id}/status")
+async def update_incident_status(
+    request: Request,
+    incident_id: int,
+    status_value: str = Form(..., alias="status"),
+    db: Session = Depends(get_db)
+):
+    """
+    Transition incident status via HTMX.
+
+    Args:
+        request: FastAPI request object
+        incident_id: Incident ID
+        status_value: New status value
+        db: Database session
+
+    Returns:
+        dict: Updated incident status information for HTMX response
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+
+    # Get the incident
+    incident = db.query(BreachIncident).filter(
+        BreachIncident.id == incident_id,
+        BreachIncident.organization_id == user.organization_id
+    ).first()
+
+    if not incident:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Incident not found"
+        )
+
+    # Update status
+    incident.status = BreachIncidentStatus(status_value)
+    db.commit()
+
+    # Return the updated status HTML fragment
+    status_badges = {
+        "detected": "bg-yellow-100 text-yellow-800",
+        "investigating": "bg-blue-100 text-blue-800",
+        "contained": "bg-purple-100 text-purple-800",
+        "resolved": "bg-green-100 text-green-800",
+        "reported": "bg-gray-100 text-gray-800"
+    }
+    badge_class = status_badges.get(incident.status.value, "bg-gray-100 text-gray-800")
+
+    return {
+        "status": incident.status.value,
+        "badge_html": f'<span class="px-2 py-1 text-xs font-semibold rounded-full {badge_class}">{incident.status.value.replace("_", " ").title()}</span>'
+    }

@@ -188,12 +188,15 @@ class BreachIncident(Base):
     description = Column(Text)
     severity = Column(Enum(RiskLevel), nullable=False)
     date_discovered = Column(DateTime, nullable=False)
-    date_reported = Column(DateTime)
     affected_records_count = Column(Integer)
+    data_types_affected = Column(JSON)  # checkboxes: names, addresses, health_info, financial, government_ids, other
     containment_actions = Column(Text)
     status = Column(Enum(BreachIncidentStatus), nullable=False, default=BreachIncidentStatus.DETECTED)
+    notification_date = Column(DateTime)  # Date authority was notified
+    authority_notified = Column(String(255))  # Which authority was notified
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
     created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
     # Relationships
     organization = relationship("Organization", back_populates="breach_incidents")

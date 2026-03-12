@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block title %}Incident Details - WA PRIS Act Compliance Portal{% endblock %}
+
+{% block page_title %}Incident Details{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="/incidents" class="text-blue-600 hover:text-blue-800 flex items-center">
+        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        Back to Incidents
+    </a>
+</div>
+
+<div class="grid grid-cols-3 gap-6">
+    <!-- Main Content - 2 columns -->
+    <div class="col-span-2 space-y-6">
+        <!-- Incident Header -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-900">{{ incident.title }}</h2>
+                    <p class="text-sm text-gray-500 mt-1">Discovered: {{ incident.date_discovered.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+                <div class="flex gap-2">
+                    {% if incident.severity.value == 'critical' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-red-100 text-red-800">Critical</span>
+                    {% elif incident.severity.value == 'high' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-orange-100 text-orange-800">High</span>
+                    {% elif incident.severity.value == 'medium' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">Medium</span>
+                    {% elif incident.severity.value == 'low' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">Low</span>
+                    {% endif %}
+
+                    {% if incident.status.value == 'detected' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">Detected</span>
+                    {% elif incident.status.value == 'investigating' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-blue-100 text-blue-800">Investigating</span>
+                    {% elif incident.status.value == 'contained' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-purple-100 text-purple-800">Contained</span>
+                    {% elif incident.status.value == 'resolved' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800">Resolved</span>
+                    {% elif incident.status.value == 'reported' %}
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full bg-gray-100 text-gray-800">Reported</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="border-t pt-4">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">Description</h3>
+                <p class="text-gray-700">{{ incident.description or 'No description provided' }}</p>
+            </div>
+        </div>
+
+        <!-- Breach Details -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Breach Details</h3>
+
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-sm font-medium text-gray-500 mb-2">Affected Records</h4>
+                    <p class="text-lg font-semibold text-gray-900">
+                        {% if incident.affected_records_count %}
+                            {{ incident.affected_records_count }}
+                        {% else %}
+                            <span class="text-gray-400 italic">Unknown</span>
+                        {% endif %}
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-medium text-gray-500 mb-2">Data Types Affected</h4>
+                    {% if incident.data_types_affected %}
+                    <div class="flex flex-wrap gap-2">
+                        {% if incident.data_types_affected.names %}
+                        <span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs">Names</span>
+                        {% endif %}
+                        {% if incident.data_types_affected.addresses %}
+                        <span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs">Addresses</span>
+                        {% endif %}
+                        {% if incident.data_types_affected.health_info %}
+                        <span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs">Health Info</span>
+                        {% endif %}
+                        {% if incident.data_types_affected.financial %}
+                        <span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs">Financial</span>
+                        {% endif %}
+                        {% if incident.data_types_affected.government_ids %}
+                        <span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs">Government IDs</span>
+                        {% endif %}
+                        {% if incident.data_types_affected.other %}
+                        <span class="inline-block bg-gray-200 px-2 py-1 rounded text-xs">Other</span>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500 italic">Not specified</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <h4 class="text-sm font-medium text-gray-500 mb-2">Containment Actions Taken</h4>
+                <p class="text-gray-700">{{ incident.containment_actions or 'No containment actions documented yet' }}</p>
+            </div>
+        </div>
+
+        <!-- Notification Details -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Notification Details</h3>
+
+            {% if incident.notification_date %}
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <h4 class="text-sm font-medium text-gray-500 mb-2">Date Notified</h4>
+                    <p class="text-gray-900">{{ incident.notification_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                </div>
+
+                <div>
+                    <h4 class="text-sm font-medium text-gray-500 mb-2">Authority Notified</h4>
+                    <p class="text-gray-900">{{ incident.authority_notified or 'Not specified' }}</p>
+                </div>
+            </div>
+            {% else %}
+            <div class="bg-yellow-50 border border-yellow-200 rounded p-4">
+                <p class="text-sm text-yellow-800">
+                    <strong>Notification Required:</strong> If this is an eligible data breach, you must notify the Commissioner and affected individuals within a reasonable time (mandatory from Jan 1, 2027).
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Timeline Sidebar - 1 column -->
+    <div class="col-span-1">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Incident Timeline</h3>
+
+            <div class="relative">
+                <!-- Timeline line -->
+                <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+
+                <!-- Timeline events -->
+                <div class="space-y-6">
+                    <!-- Created event -->
+                    <div class="relative pl-10">
+                        <div class="absolute left-0 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">Incident Logged</p>
+                            <p class="text-xs text-gray-500">{{ incident.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Discovered event -->
+                    <div class="relative pl-10">
+                        <div class="absolute left-0 w-8 h-8 {% if incident.severity.value == 'critical' or incident.severity.value == 'high' %}bg-red-200{% else %}bg-yellow-200{% endif %} rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 {% if incident.severity.value == 'critical' or incident.severity.value == 'high' %}text-red-600{% else %}text-yellow-600{% endif %}" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">Breach Discovered</p>
+                            <p class="text-xs text-gray-500">{{ incident.date_discovered.strftime('%Y-%m-%d %H:%M') }}</p>
+                            <p class="text-xs text-gray-600 mt-1">Severity: {{ incident.severity.value.title() }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Status transitions -->
+                    {% if incident.status.value != 'detected' %}
+                    <div class="relative pl-10">
+                        <div class="absolute left-0 w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">Status: {{ incident.status.value.replace('_', ' ').title() }}</p>
+                            <p class="text-xs text-gray-500">{{ incident.updated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Notification event -->
+                    {% if incident.notification_date %}
+                    <div class="relative pl-10">
+                        <div class="absolute left-0 w-8 h-8 bg-green-200 rounded-full flex items-center justify-center">
+                            <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-gray-900">Authority Notified</p>
+                            <p class="text-xs text-gray-500">{{ incident.notification_date.strftime('%Y-%m-%d %H:%M') }}</p>
+                            {% if incident.authority_notified %}
+                            <p class="text-xs text-gray-600 mt-1">{{ incident.authority_notified }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Status update form -->
+            <form method="post" action="/api/incidents/{{ incident.id }}/status" class="mt-6 pt-6 border-t" hx-post="/api/incidents/{{ incident.id }}/status" hx-target="#status-badge" hx-swap="innerHTML">
+                <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Update Status</label>
+                <select name="status" id="status" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 mb-3">
+                    <option value="detected" {% if incident.status.value == 'detected' %}selected{% endif %}>Detected</option>
+                    <option value="investigating" {% if incident.status.value == 'investigating' %}selected{% endif %}>Investigating</option>
+                    <option value="contained" {% if incident.status.value == 'contained' %}selected{% endif %}>Contained</option>
+                    <option value="resolved" {% if incident.status.value == 'resolved' %}selected{% endif %}>Resolved</option>
+                    <option value="reported" {% if incident.status.value == 'reported' %}selected{% endif %}>Reported</option>
+                </select>
+                <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                    Update Status
+                </button>
+            </form>
+
+            <!-- Edit button -->
+            <a href="/incidents" class="block mt-4 text-center px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 transition">
+                Back to List
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
