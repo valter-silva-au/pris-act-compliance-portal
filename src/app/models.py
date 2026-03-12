@@ -166,12 +166,17 @@ class AccessRequest(Base):
     request_type = Column(Enum(RequestType), nullable=False)
     description = Column(Text)
     status = Column(Enum(AccessRequestStatus), nullable=False, default=AccessRequestStatus.RECEIVED)
-    due_date = Column(Date)
+    date_received = Column(DateTime, default=utc_now, nullable=False)
+    due_date = Column(Date, nullable=False)
+    assigned_handler_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    response_notes = Column(Text)
+    date_completed = Column(Date)
     organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
     created_at = Column(DateTime, default=utc_now)
 
     # Relationships
     organization = relationship("Organization", back_populates="access_requests")
+    assigned_handler = relationship("User", foreign_keys=[assigned_handler_id])
 
 
 class BreachIncident(Base):

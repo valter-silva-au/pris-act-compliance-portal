@@ -1,0 +1,392 @@
+{% extends "base.html" %}
+
+{% block title %}Access & Correction Requests - WA PRIS Act Compliance Portal{% endblock %}
+
+{% block page_title %}Access & Correction Requests{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-lg shadow-md p-6">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h3 class="text-lg font-semibold text-gray-900">Request Tracker</h3>
+            <p class="text-sm text-gray-600 mt-1">Track access and correction requests under IPPs 6 & 7</p>
+        </div>
+        <button onclick="openAddModal()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+            + Log New Request
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="mb-4 flex gap-4">
+        <div>
+            <label for="statusFilter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Status</label>
+            <select id="statusFilter" onchange="filterRequests()" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Statuses</option>
+                <option value="received">Received</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+                <option value="denied">Denied</option>
+            </select>
+        </div>
+        <div>
+            <label for="typeFilter" class="block text-sm font-medium text-gray-700 mb-1">Filter by Type</label>
+            <select id="typeFilter" onchange="filterRequests()" class="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                <option value="">All Types</option>
+                <option value="access">Access</option>
+                <option value="correction">Correction</option>
+            </select>
+        </div>
+    </div>
+
+    {% if requests %}
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Requester
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Date Received
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Due Date
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Assigned To
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for req in requests %}
+                <tr class="hover:bg-gray-50 request-row" data-status="{{ req.status.value }}" data-type="{{ req.request_type.value }}">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <button onclick="toggleDetails('details-{{ req.id }}')" class="mr-2 text-gray-500 hover:text-gray-700">
+                                <svg id="icon-{{ req.id }}" class="w-5 h-5 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </button>
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">{{ req.requester_name }}</div>
+                                <div class="text-sm text-gray-500">{{ req.requester_email }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full {% if req.request_type.value == 'access' %}bg-blue-100 text-blue-800{% else %}bg-purple-100 text-purple-800{% endif %}">
+                            {{ req.request_type.value.title() }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if req.status.value == 'received' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Received</span>
+                        {% elif req.status.value == 'in_progress' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">In Progress</span>
+                        {% elif req.status.value == 'completed' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">Completed</span>
+                        {% elif req.status.value == 'denied' %}
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Denied</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ req.created_at.strftime('%Y-%m-%d') }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% if req.due_date %}
+                            {% if req.status.value in ['completed', 'denied'] %}
+                                <span class="text-gray-600">{{ req.due_date.strftime('%Y-%m-%d') }}</span>
+                            {% else %}
+                                {% set days_until_due = (req.due_date - request.scope.get('today_date', req.created_at.date())).days %}
+                                {% if days_until_due < 0 %}
+                                    <span class="text-red-600 font-semibold">{{ req.due_date.strftime('%Y-%m-%d') }} (Overdue)</span>
+                                {% elif days_until_due <= 7 %}
+                                    <span class="text-orange-600 font-semibold">{{ req.due_date.strftime('%Y-%m-%d') }} ({{ days_until_due }}d)</span>
+                                {% else %}
+                                    <span class="text-gray-900">{{ req.due_date.strftime('%Y-%m-%d') }}</span>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <span class="text-gray-500">Not set</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {% if req.assigned_handler %}
+                            {{ req.assigned_handler.full_name }}
+                        {% else %}
+                            <span class="text-gray-500 italic">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="openEditModal({{ req.id }}, '{{ req.requester_name }}', '{{ req.requester_email }}', '{{ req.request_type.value }}', `{{ req.description or '' }}`, {{ req.assigned_handler_id or 'null' }}, '{{ req.status.value }}', `{{ req.response_notes or '' }}`, '{{ req.date_completed.strftime('%Y-%m-%d') if req.date_completed else '' }}')" class="text-blue-600 hover:text-blue-900">
+                            Edit
+                        </button>
+                    </td>
+                </tr>
+                <tr id="details-{{ req.id }}" class="hidden bg-gray-50">
+                    <td colspan="7" class="px-6 py-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Request Description</h4>
+                                <p class="text-sm text-gray-600">{{ req.description or 'No description provided' }}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Response Notes</h4>
+                                <p class="text-sm text-gray-600">{{ req.response_notes or 'No response notes' }}</p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Date Completed</h4>
+                                <p class="text-sm text-gray-600">
+                                    {% if req.date_completed %}
+                                        {{ req.date_completed.strftime('%Y-%m-%d') }}
+                                    {% else %}
+                                        Not completed
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-700 mb-2">Assigned Handler</h4>
+                                <p class="text-sm text-gray-600">
+                                    {% if req.assigned_handler %}
+                                        {{ req.assigned_handler.full_name }} ({{ req.assigned_handler.email }})
+                                    {% else %}
+                                        Unassigned
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No Requests Logged</h3>
+        <p class="mt-1 text-sm text-gray-500">Get started by logging your first access or correction request.</p>
+        <div class="mt-6">
+            <button onclick="openAddModal()" class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                + Log New Request
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mt-6 bg-blue-50 border-l-4 border-blue-400 p-4">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+            </svg>
+        </div>
+        <div class="ml-3">
+            <p class="text-sm text-blue-700">
+                <strong>IPPs 6 & 7 Requirement:</strong> Under the PRIS Act, individuals have the right to request access to their personal information (IPP 6) and request corrections to inaccurate information (IPP 7). Organizations must respond within 45 days.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="requestModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-2/3 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="modalTitle" class="text-lg font-semibold text-gray-900">Log New Request</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+
+        <form id="requestForm" method="post" action="/api/requests">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="requester_name" class="block text-sm font-medium text-gray-700 mb-1">Requester Name *</label>
+                    <input type="text" id="requester_name" name="requester_name" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="Full name">
+                </div>
+
+                <div>
+                    <label for="requester_email" class="block text-sm font-medium text-gray-700 mb-1">Requester Email *</label>
+                    <input type="email" id="requester_email" name="requester_email" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="email@example.com">
+                </div>
+
+                <div>
+                    <label for="request_type" class="block text-sm font-medium text-gray-700 mb-1">Request Type *</label>
+                    <select id="request_type" name="request_type" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select type...</option>
+                        <option value="access">Access - Request to view personal information</option>
+                        <option value="correction">Correction - Request to correct personal information</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label for="assigned_handler_id" class="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+                    <select id="assigned_handler_id" name="assigned_handler_id"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Unassigned</option>
+                        {% for org_user in org_users %}
+                        <option value="{{ org_user.id }}">{{ org_user.full_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description of Request</label>
+                    <textarea id="description" name="description" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Describe what information is being requested or what correction is needed"></textarea>
+                </div>
+
+                <!-- These fields only show in edit mode -->
+                <div id="statusField" class="hidden">
+                    <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select id="status" name="status"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="received">Received</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="denied">Denied</option>
+                    </select>
+                </div>
+
+                <div id="dateCompletedField" class="hidden">
+                    <label for="date_completed" class="block text-sm font-medium text-gray-700 mb-1">Date Completed</label>
+                    <input type="date" id="date_completed" name="date_completed"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div id="responseNotesField" class="col-span-2 hidden">
+                    <label for="response_notes" class="block text-sm font-medium text-gray-700 mb-1">Response Notes</label>
+                    <textarea id="response_notes" name="response_notes" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Document the response provided to the requester"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeModal()" class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                    Save Request
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleDetails(id) {
+    const detailsRow = document.getElementById(id);
+    const iconId = id.replace('details-', 'icon-');
+    const icon = document.getElementById(iconId);
+
+    if (detailsRow.classList.contains('hidden')) {
+        detailsRow.classList.remove('hidden');
+        icon.classList.add('rotate-90');
+    } else {
+        detailsRow.classList.add('hidden');
+        icon.classList.remove('rotate-90');
+    }
+}
+
+function openAddModal() {
+    document.getElementById('modalTitle').textContent = 'Log New Request';
+    document.getElementById('requestForm').action = '/api/requests';
+    document.getElementById('requestForm').reset();
+
+    // Hide edit-only fields
+    document.getElementById('statusField').classList.add('hidden');
+    document.getElementById('dateCompletedField').classList.add('hidden');
+    document.getElementById('responseNotesField').classList.add('hidden');
+
+    document.getElementById('requestModal').classList.remove('hidden');
+}
+
+function openEditModal(id, name, email, type, description, handlerId, status, responseNotes, dateCompleted) {
+    document.getElementById('modalTitle').textContent = 'Edit Request';
+    document.getElementById('requestForm').action = '/api/requests/' + id;
+
+    document.getElementById('requester_name').value = name;
+    document.getElementById('requester_email').value = email;
+    document.getElementById('request_type').value = type;
+    document.getElementById('description').value = description;
+    document.getElementById('assigned_handler_id').value = handlerId || '';
+    document.getElementById('status').value = status;
+    document.getElementById('response_notes').value = responseNotes;
+    document.getElementById('date_completed').value = dateCompleted;
+
+    // Show edit-only fields
+    document.getElementById('statusField').classList.remove('hidden');
+    document.getElementById('dateCompletedField').classList.remove('hidden');
+    document.getElementById('responseNotesField').classList.remove('hidden');
+
+    document.getElementById('requestModal').classList.remove('hidden');
+}
+
+function closeModal() {
+    document.getElementById('requestModal').classList.add('hidden');
+}
+
+function filterRequests() {
+    const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+    const typeFilter = document.getElementById('typeFilter').value.toLowerCase();
+    const rows = document.querySelectorAll('.request-row');
+
+    rows.forEach(row => {
+        const status = row.dataset.status;
+        const type = row.dataset.type;
+
+        const statusMatch = !statusFilter || status === statusFilter;
+        const typeMatch = !typeFilter || type === typeFilter;
+
+        if (statusMatch && typeMatch) {
+            row.style.display = '';
+            // Also show the corresponding details row if it exists
+            const detailsRow = document.getElementById('details-' + row.querySelector('[id^="icon-"]').id.replace('icon-', ''));
+            if (detailsRow && !detailsRow.classList.contains('hidden')) {
+                detailsRow.style.display = '';
+            }
+        } else {
+            row.style.display = 'none';
+            // Also hide the corresponding details row
+            const detailsRow = document.getElementById('details-' + row.querySelector('[id^="icon-"]').id.replace('icon-', ''));
+            if (detailsRow) {
+                detailsRow.style.display = 'none';
+            }
+        }
+    });
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('requestModal');
+    if (event.target === modal) {
+        closeModal();
+    }
+}
+</script>
+{% endblock %}

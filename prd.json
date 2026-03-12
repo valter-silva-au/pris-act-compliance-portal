@@ -138,7 +138,7 @@
         "Due date is automatically set to 45 days from creation",
         "Tests verify CRUD and due date calculation"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-004"
       ]

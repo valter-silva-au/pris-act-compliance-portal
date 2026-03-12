@@ -15,8 +15,11 @@ from src.app.auth import (
     get_user_by_email,
 )
 from src.app.database import get_db
-from src.app.models import Organization, User, PrivacyOfficer, PIA, PIAStatus, RiskLevel, DataRegister
-from datetime import date
+from src.app.models import (
+    Organization, User, PrivacyOfficer, PIA, PIAStatus, RiskLevel, DataRegister,
+    AccessRequest, RequestType, AccessRequestStatus
+)
+from datetime import date, timedelta
 import json
 
 # Create router for web pages
@@ -871,3 +874,163 @@ async def delete_data_register_entry(
     db.commit()
 
     return {"message": "Data register entry deleted successfully"}
+
+
+@router.get("/requests", response_class=HTMLResponse)
+async def requests_list(request: Request, db: Session = Depends(get_db)):
+    """
+    Display list of all access and correction requests.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+
+    Returns:
+        HTMLResponse: Rendered requests list page or redirect to login
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get all requests for the organization
+    requests = db.query(AccessRequest).filter(
+        AccessRequest.organization_id == user.organization_id
+    ).order_by(AccessRequest.created_at.desc()).all()
+
+    # Get all users in the organization for the handler dropdown
+    org_users = db.query(User).filter(
+        User.organization_id == user.organization_id
+    ).all()
+
+    return templates.TemplateResponse(
+        "requests.html",
+        {
+            "request": request,
+            "user": user,
+            "requests": requests,
+            "org_users": org_users
+        }
+    )
+
+
+@router.post("/api/requests", response_class=RedirectResponse)
+async def create_request(
+    request: Request,
+    requester_name: str = Form(...),
+    requester_email: str = Form(...),
+    request_type: str = Form(...),
+    description: str = Form(""),
+    assigned_handler_id: int = Form(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new access or correction request with auto-calculated due date.
+
+    Args:
+        request: FastAPI request object
+        requester_name: Name of the requester
+        requester_email: Email of the requester
+        request_type: Type of request (access or correction)
+        description: Description of what's requested
+        assigned_handler_id: Optional user ID to assign the request to
+        db: Database session
+
+    Returns:
+        RedirectResponse: Redirect to requests list page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Calculate due date: 45 days from today (PRIS Act requirement)
+    due_date = date.today() + timedelta(days=45)
+
+    # Create new request
+    new_request = AccessRequest(
+        requester_name=requester_name,
+        requester_email=requester_email,
+        request_type=RequestType(request_type),
+        description=description if description else None,
+        status=AccessRequestStatus.RECEIVED,
+        due_date=due_date,
+        assigned_handler_id=assigned_handler_id if assigned_handler_id else None,
+        organization_id=user.organization_id
+    )
+    db.add(new_request)
+    db.commit()
+
+    return RedirectResponse(url="/requests", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.put("/api/requests/{request_id}", response_class=RedirectResponse)
+@router.post("/api/requests/{request_id}", response_class=RedirectResponse)
+async def update_request(
+    request: Request,
+    request_id: int,
+    requester_name: str = Form(...),
+    requester_email: str = Form(...),
+    request_type: str = Form(...),
+    description: str = Form(""),
+    assigned_handler_id: int = Form(None),
+    status_value: str = Form(..., alias="status"),
+    response_notes: str = Form(""),
+    date_completed: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Update an access or correction request.
+
+    Args:
+        request: FastAPI request object
+        request_id: Request ID
+        requester_name: Name of the requester
+        requester_email: Email of the requester
+        request_type: Type of request (access or correction)
+        description: Description of what's requested
+        assigned_handler_id: Optional user ID to assign the request to
+        status_value: Request status
+        response_notes: Notes about the response
+        date_completed: Date the request was completed
+        db: Database session
+
+    Returns:
+        RedirectResponse: Redirect to requests list page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get the request
+    access_request = db.query(AccessRequest).filter(
+        AccessRequest.id == request_id,
+        AccessRequest.organization_id == user.organization_id
+    ).first()
+
+    if not access_request:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Request not found"
+        )
+
+    # Parse date_completed if provided
+    parsed_date_completed = None
+    if date_completed:
+        try:
+            from datetime import datetime
+            parsed_date_completed = datetime.strptime(date_completed, "%Y-%m-%d").date()
+        except ValueError:
+            pass
+
+    # Update request fields
+    access_request.requester_name = requester_name
+    access_request.requester_email = requester_email
+    access_request.request_type = RequestType(request_type)
+    access_request.description = description if description else None
+    access_request.assigned_handler_id = assigned_handler_id if assigned_handler_id else None
+    access_request.status = AccessRequestStatus(status_value)
+    access_request.response_notes = response_notes if response_notes else None
+    access_request.date_completed = parsed_date_completed
+
+    db.commit()
+
+    return RedirectResponse(url="/requests", status_code=status.HTTP_303_SEE_OTHER)
