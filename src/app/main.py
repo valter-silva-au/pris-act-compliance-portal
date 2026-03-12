@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 from src.app.auth import router as auth_router
 from src.app.ipp import router as ipp_router
+from src.app.routes.web import router as web_router
 from src.app.database import init_db
 
 # Create FastAPI application instance
@@ -19,6 +20,7 @@ def startup_event():
     init_db()
 
 # Include routers
+app.include_router(web_router)
 app.include_router(auth_router)
 app.include_router(ipp_router)
 

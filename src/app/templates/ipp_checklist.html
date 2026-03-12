@@ -1,78 +1,99 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPP Compliance Checklist - WA PRIS Act Compliance Portal</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <style>
-        body { background-color: #f8f9fa; padding-top: 20px; }
-        .container { max-width: 1200px; }
-        .ipp-card { margin-bottom: 20px; border-left: 4px solid #0d6efd; }
-        .ipp-number { background-color: #0d6efd; color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .header-section { background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        .save-indicator { display: none; color: #198754; font-size: 0.875rem; margin-top: 5px; }
-        .save-indicator.show { display: block; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header-section">
-            <h1 class="mb-3">IPP Compliance Checklist</h1>
-            <p class="text-muted mb-4">Information Privacy Principles Assessment for {{ user.organization.name }}</p>
-            <div id="compliance-score" class="alert alert-info">
-                <h4>Overall Compliance Score</h4>
-                <p class="mb-0"><strong>{{ score.compliant }}/{{ score.total }}</strong> IPPs Compliant ({{ score.percentage }}%)</p>
-            </div>
+{% extends "base.html" %}
+
+{% block title %}IPP Compliance Checklist - WA PRIS Act Compliance Portal{% endblock %}
+
+{% block page_title %}IPP Compliance Checklist{% endblock %}
+
+{% block extra_head %}
+<style>
+    .save-indicator { display: none; color: #10b981; font-size: 0.875rem; margin-top: 5px; }
+    .save-indicator.show { display: block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Header Section -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <p class="text-gray-600 mb-4">Information Privacy Principles Assessment for {{ user.organization.name }}</p>
+        <div id="compliance-score" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 class="text-lg font-semibold text-blue-900 mb-2">Overall Compliance Score</h4>
+            <p class="mb-0 text-blue-800"><strong>{{ score.compliant }}/{{ score.total }}</strong> IPPs Compliant ({{ score.percentage }}%)</p>
         </div>
-        <div class="ipp-checklist">
-            {% for assessment in assessments %}
-            <div class="card ipp-card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-auto">
-                            <div class="ipp-number">{{ assessment.ipp_number }}</div>
+    </div>
+
+    <!-- IPP Checklist -->
+    <div class="space-y-4">
+        {% for assessment in assessments %}
+        <div class="bg-white rounded-lg shadow border-l-4 border-indigo-600">
+            <div class="p-6">
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0">
+                        <div class="bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center font-bold">
+                            {{ assessment.ipp_number }}
                         </div>
-                        <div class="col">
-                            <h5 class="card-title mb-2">IPP {{ assessment.ipp_number }}: {{ assessment.ipp_name }}</h5>
-                            <p class="card-text text-muted mb-3">{{ assessment.description }}</p>
-                            <form hx-post="/api/ipp/{{ assessment.ipp_number }}" hx-target="#compliance-score" hx-swap="outerHTML" hx-trigger="change" hx-indicator="#save-indicator-{{ assessment.ipp_number }}">
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <label for="status-{{ assessment.ipp_number }}" class="form-label">Compliance Status</label>
-                                        <select id="status-{{ assessment.ipp_number }}" name="compliance_status" class="form-select">
-                                            {% for option in status_options %}
-                                            <option value="{{ option.value }}" {% if assessment.compliance_status.value == option.value %}selected{% endif %}>{{ option.label }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <label for="notes-{{ assessment.ipp_number }}" class="form-label">Evidence Notes</label>
-                                        <textarea id="notes-{{ assessment.ipp_number }}" name="evidence_notes" class="form-control" rows="2" placeholder="Document your evidence and compliance measures...">{{ assessment.evidence_notes }}</textarea>
-                                        <div id="save-indicator-{{ assessment.ipp_number }}" class="save-indicator htmx-indicator"><small>✓ Saved</small></div>
+                    </div>
+                    <div class="flex-1">
+                        <h5 class="text-lg font-semibold text-gray-900 mb-2">IPP {{ assessment.ipp_number }}: {{ assessment.ipp_name }}</h5>
+                        <p class="text-gray-600 mb-4">{{ assessment.description }}</p>
+                        <form hx-post="/api/ipp/{{ assessment.ipp_number }}"
+                              hx-target="#compliance-score"
+                              hx-swap="outerHTML"
+                              hx-trigger="change"
+                              hx-indicator="#save-indicator-{{ assessment.ipp_number }}"
+                              hx-ext="json-enc">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label for="status-{{ assessment.ipp_number }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Compliance Status
+                                    </label>
+                                    <select id="status-{{ assessment.ipp_number }}"
+                                            name="compliance_status"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                        {% for option in status_options %}
+                                        <option value="{{ option.value }}" {% if assessment.compliance_status.value == option.value %}selected{% endif %}>
+                                            {{ option.label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label for="notes-{{ assessment.ipp_number }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Evidence Notes
+                                    </label>
+                                    <textarea id="notes-{{ assessment.ipp_number }}"
+                                              name="evidence_notes"
+                                              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                              rows="2"
+                                              placeholder="Document your evidence and compliance measures...">{{ assessment.evidence_notes }}</textarea>
+                                    <div id="save-indicator-{{ assessment.ipp_number }}" class="save-indicator htmx-indicator">
+                                        <small>✓ Saved</small>
                                     </div>
                                 </div>
-                            </form>
-                        </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
-            {% endfor %}
         </div>
-        <div class="text-center mt-4 mb-5">
-            <p class="text-muted"><small>Last updated: {{ assessments[0].updated_at.strftime('%Y-%m-%d %H:%M UTC') if assessments else 'N/A' }}</small></p>
-        </div>
+        {% endfor %}
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.body.addEventListener('htmx:afterRequest', function(event) {
-            const indicator = event.detail.elt.querySelector('.save-indicator');
-            if (indicator) {
-                indicator.classList.add('show');
-                setTimeout(() => { indicator.classList.remove('show'); }, 2000);
-            }
-        });
-    </script>
-</body>
-</html>
+
+    <!-- Footer -->
+    <div class="text-center mt-6 mb-5">
+        <p class="text-gray-500 text-sm">Last updated: {{ assessments[0].updated_at.strftime('%Y-%m-%d %H:%M UTC') if assessments else 'N/A' }}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    document.body.addEventListener('htmx:afterRequest', function(event) {
+        const indicator = event.detail.elt.querySelector('.save-indicator');
+        if (indicator) {
+            indicator.classList.add('show');
+            setTimeout(() => { indicator.classList.remove('show'); }, 2000);
+        }
+    });
+</script>
+{% endblock %}
