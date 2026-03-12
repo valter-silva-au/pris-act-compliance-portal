@@ -89,7 +89,7 @@
         "Officer details display name, email, phone, designation date",
         "Tests verify designation and retrieval"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-004"
       ]
