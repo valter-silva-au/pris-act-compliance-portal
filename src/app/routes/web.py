@@ -63,17 +63,18 @@ def get_current_user_from_cookie(request: Request, db: Session) -> User | None:
         return None
 
 
-@router.get("/", response_class=RedirectResponse)
+@router.get("/")
 async def root(request: Request, db: Session = Depends(get_db)):
     """
-    Root endpoint that redirects to dashboard or login based on auth state.
+    Root endpoint that shows landing page or redirects to dashboard based on auth state.
 
     Args:
         request: FastAPI request object
         db: Database session
 
     Returns:
-        RedirectResponse: Redirect to /dashboard if authenticated, /web/login otherwise
+        HTMLResponse: Landing page if not authenticated
+        RedirectResponse: Redirect to /dashboard or /onboarding if authenticated
     """
     user = get_current_user_from_cookie(request, db)
     if user:
@@ -82,7 +83,8 @@ async def root(request: Request, db: Session = Depends(get_db)):
         if org and not org.onboarding_completed:
             return RedirectResponse(url="/onboarding", status_code=status.HTTP_302_FOUND)
         return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
-    return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+    # Show public landing page when not authenticated
+    return templates.TemplateResponse("landing.html", {"request": request})
 
 
 @router.get("/web/login", response_class=HTMLResponse)

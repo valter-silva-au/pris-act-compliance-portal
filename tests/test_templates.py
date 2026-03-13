@@ -201,11 +201,12 @@ class TestRegisterTemplate:
 class TestRootRedirect:
     """Tests for GET / redirect behavior."""
 
-    def test_root_redirects_to_login_when_not_authenticated(self, client):
-        """Verify GET / redirects to /login when not authenticated."""
+    def test_root_shows_landing_page_when_not_authenticated(self, client):
+        """Verify GET / shows landing page when not authenticated."""
         response = client.get("/", follow_redirects=False)
-        assert response.status_code == 302
-        assert "/web/login" in response.headers["location"]
+        assert response.status_code == 200
+        assert "PRIS Act Compliance Made Simple" in response.text
+        assert "Help your business comply with WA's new privacy law before July 2026" in response.text
 
     def test_root_redirects_to_dashboard_when_authenticated(self, client, test_user):
         """Verify GET / redirects to /dashboard when authenticated."""
@@ -246,3 +247,88 @@ class TestJinja2ExtendsBlocks:
             assert "{% block title %}" in base_content
             assert "{% block content %}" in base_content
             assert "{% endblock %}" in base_content
+
+
+class TestLandingPage:
+    """Tests for TASK-018: Public landing page."""
+
+    def test_landing_page_shows_when_not_authenticated(self, client):
+        """Verify GET / shows landing page when not authenticated."""
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "text/html" in response.headers["content-type"]
+        assert "PRIS Act Compliance Made Simple" in response.text
+
+    def test_hero_section_has_headline_and_cta(self, client):
+        """Verify hero section has headline and CTA button."""
+        response = client.get("/")
+        assert response.status_code == 200
+        # Check headline
+        assert "PRIS Act Compliance Made Simple" in response.text
+        # Check subheadline
+        assert "Help your business comply with WA's new privacy law before July 2026" in response.text
+        # Check CTA button linking to register
+        assert "/web/register" in response.text
+        assert "Start Your Free Trial" in response.text or "Get Started" in response.text
+
+    def test_feature_highlights_describe_six_features(self, client):
+        """Verify feature highlights section describes 6 key features."""
+        response = client.get("/")
+        assert response.status_code == 200
+
+        # Check for all 6 features
+        features = [
+            "IPP Compliance Checklist",
+            "Privacy Officer Management",
+            "Privacy Impact Assessments",
+            "Personal Information Register",
+            "Access Request Tracking",
+            "Breach Incident Logger"
+        ]
+
+        for feature in features:
+            assert feature in response.text, f"Feature '{feature}' not found in landing page"
+
+    def test_pricing_section_shows_two_tiers(self, client):
+        """Verify pricing section shows two tiers."""
+        response = client.get("/")
+        assert response.status_code == 200
+
+        # Check for pricing tiers
+        assert "$99" in response.text  # Starter tier
+        assert "$199" in response.text  # Professional tier
+
+        # Check for tier descriptions
+        assert "Up to 5 users" in response.text or "5 users" in response.text
+        assert "Unlimited users" in response.text
+
+    def test_faq_section_answers_four_questions(self, client):
+        """Verify FAQ section answers 4 common questions."""
+        response = client.get("/")
+        assert response.status_code == 200
+
+        # Check for all 4 FAQ questions
+        questions = [
+            "What is the PRIS Act?",
+            "Who needs to comply?",
+            "What happens if I don't comply?",
+            "When does it take effect?"
+        ]
+
+        for question in questions:
+            assert question in response.text, f"FAQ question '{question}' not found in landing page"
+
+        # Check for some answer content
+        assert "Privacy and Responsible Information Sharing" in response.text
+        assert "Community Service Providers" in response.text
+        assert "July 2026" in response.text
+
+    def test_cta_links_to_register(self, client):
+        """Verify CTA links to /register."""
+        response = client.get("/")
+        assert response.status_code == 200
+
+        # Check that multiple CTAs link to register
+        assert "/web/register" in response.text
+        # Should have multiple CTAs throughout the page
+        assert response.text.count("/web/register") >= 3, "Should have at least 3 links to register page"
