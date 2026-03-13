@@ -352,7 +352,7 @@
         "GET /login returns 200 with login form",
         "GET /register returns 200 with register form"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-021"
       ]
