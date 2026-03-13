@@ -151,42 +151,42 @@
             <div class="grid grid-cols-2 gap-4">
                 <div class="col-span-2">
                     <label for="data_category" class="block text-sm font-medium text-gray-700 mb-1">Data Category *</label>
-                    <input type="text" id="data_category" name="data_category" required
+                    <input type="text" id="data_category" name="data_category" required minlength="2"
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                            placeholder="e.g., Employee records, Client contact details">
                 </div>
 
                 <div class="col-span-2">
-                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea id="description" name="description" rows="2"
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                    <textarea id="description" name="description" rows="2" required
                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                               placeholder="Describe what information is included"></textarea>
                 </div>
 
                 <div>
-                    <label for="storage_location" class="block text-sm font-medium text-gray-700 mb-1">Storage Location</label>
-                    <input type="text" id="storage_location" name="storage_location"
+                    <label for="storage_location" class="block text-sm font-medium text-gray-700 mb-1">Storage Location *</label>
+                    <input type="text" id="storage_location" name="storage_location" required
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                            placeholder="e.g., HR database, Filing cabinet Room 3">
                 </div>
 
                 <div>
-                    <label for="retention_period" class="block text-sm font-medium text-gray-700 mb-1">Retention Period</label>
-                    <input type="text" id="retention_period" name="retention_period"
+                    <label for="retention_period" class="block text-sm font-medium text-gray-700 mb-1">Retention Period *</label>
+                    <input type="text" id="retention_period" name="retention_period" required
                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                            placeholder="e.g., 7 years, Indefinite">
                 </div>
 
                 <div class="col-span-2">
-                    <label for="access_controls" class="block text-sm font-medium text-gray-700 mb-1">Access Controls / Who Can Access</label>
-                    <textarea id="access_controls" name="access_controls" rows="2"
+                    <label for="access_controls" class="block text-sm font-medium text-gray-700 mb-1">Access Controls / Who Can Access *</label>
+                    <textarea id="access_controls" name="access_controls" rows="2" required
                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                               placeholder="Describe who has access (roles/teams)"></textarea>
                 </div>
 
                 <div class="col-span-2">
-                    <label for="legal_basis" class="block text-sm font-medium text-gray-700 mb-1">Legal Basis for Collection</label>
-                    <textarea id="legal_basis" name="legal_basis" rows="2"
+                    <label for="legal_basis" class="block text-sm font-medium text-gray-700 mb-1">Legal Basis for Collection *</label>
+                    <textarea id="legal_basis" name="legal_basis" rows="2" required
                               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                               placeholder="e.g., Employment contract, Consent, Legal obligation"></textarea>
                 </div>
