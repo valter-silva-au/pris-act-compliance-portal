@@ -1115,6 +1115,31 @@ async def create_pia(
     if not user:
         return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
 
+    # Validate title (3-200 chars required)
+    ok, err = validate_required_string(title, "Title", min_len=3, max_len=200)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate description (10-5000 chars required)
+    ok, err = validate_required_string(description, "Description", min_len=10, max_len=5000)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate risk_level (must be one of low/medium/high/critical)
+    ok, err = validate_enum(risk_level, "Risk level", ["low", "medium", "high", "critical"])
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate data_flow_description (max 5000 chars)
+    ok, err = validate_required_string(data_flow_description, "Data flow description", min_len=1, max_len=5000)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate mitigation_measures (max 5000 chars)
+    ok, err = validate_required_string(mitigation_measures, "Mitigation measures", min_len=1, max_len=5000)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
     # Build data_types JSON
     data_types = {
         "names": data_types_names,
@@ -1206,6 +1231,31 @@ async def update_pia(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="PIA not found"
         )
+
+    # Validate title (3-200 chars required)
+    ok, err = validate_required_string(title, "Title", min_len=3, max_len=200)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate description (10-5000 chars required)
+    ok, err = validate_required_string(description, "Description", min_len=10, max_len=5000)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate risk_level (must be one of low/medium/high/critical)
+    ok, err = validate_enum(risk_level, "Risk level", ["low", "medium", "high", "critical"])
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate data_flow_description (max 5000 chars)
+    ok, err = validate_required_string(data_flow_description, "Data flow description", min_len=1, max_len=5000)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate mitigation_measures (max 5000 chars)
+    ok, err = validate_required_string(mitigation_measures, "Mitigation measures", min_len=1, max_len=5000)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
 
     # Build data_types JSON
     data_types = {

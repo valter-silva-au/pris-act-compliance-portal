@@ -463,3 +463,215 @@ def test_multi_tenant_isolation(client, db, test_org, test_user):
     # Verify first user cannot access second org's PIA
     response = client.get(f"/pias/{pia2.id}", follow_redirects=False)
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_create_pia_empty_title_returns_422(client, test_user):
+    """Test POST /api/pias with empty title returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code in (status.HTTP_200_OK, status.HTTP_303_SEE_OTHER, status.HTTP_302_FOUND)
+
+    # Try to create PIA with empty title
+    response = client.post(
+        "/api/pias",
+        data={
+            "title": "",
+            "description": "Valid description that is long enough",
+            "data_types_names": "true",
+            "data_types_addresses": "false",
+            "data_types_health": "false",
+            "data_types_financial": "false",
+            "data_types_gov_ids": "false",
+            "data_types_other": "false",
+            "data_flow_description": "Valid data flow description",
+            "risk_level": "medium",
+            "mitigation_measures": "Valid mitigation measures"
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == 422
+
+
+def test_create_pia_short_title_returns_422(client, test_user):
+    """Test POST /api/pias with title too short (< 3 chars) returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code in (status.HTTP_200_OK, status.HTTP_303_SEE_OTHER, status.HTTP_302_FOUND)
+
+    # Try to create PIA with title too short
+    response = client.post(
+        "/api/pias",
+        data={
+            "title": "AB",
+            "description": "Valid description that is long enough",
+            "data_types_names": "true",
+            "data_types_addresses": "false",
+            "data_types_health": "false",
+            "data_types_financial": "false",
+            "data_types_gov_ids": "false",
+            "data_types_other": "false",
+            "data_flow_description": "Valid data flow description",
+            "risk_level": "low",
+            "mitigation_measures": "Valid mitigation measures"
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == 422
+
+
+def test_create_pia_short_description_returns_422(client, test_user):
+    """Test POST /api/pias with description too short (< 10 chars) returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code in (status.HTTP_200_OK, status.HTTP_303_SEE_OTHER, status.HTTP_302_FOUND)
+
+    # Try to create PIA with description too short
+    response = client.post(
+        "/api/pias",
+        data={
+            "title": "Valid Title",
+            "description": "Short",
+            "data_types_names": "true",
+            "data_types_addresses": "false",
+            "data_types_health": "false",
+            "data_types_financial": "false",
+            "data_types_gov_ids": "false",
+            "data_types_other": "false",
+            "data_flow_description": "Valid data flow description",
+            "risk_level": "high",
+            "mitigation_measures": "Valid mitigation measures"
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == 422
+
+
+def test_create_pia_invalid_risk_level_returns_422(client, test_user):
+    """Test POST /api/pias with invalid risk_level returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code in (status.HTTP_200_OK, status.HTTP_303_SEE_OTHER, status.HTTP_302_FOUND)
+
+    # Try to create PIA with invalid risk_level
+    response = client.post(
+        "/api/pias",
+        data={
+            "title": "Valid Title",
+            "description": "Valid description that is long enough",
+            "data_types_names": "true",
+            "data_types_addresses": "false",
+            "data_types_health": "false",
+            "data_types_financial": "false",
+            "data_types_gov_ids": "false",
+            "data_types_other": "false",
+            "data_flow_description": "Valid data flow description",
+            "risk_level": "super-high",
+            "mitigation_measures": "Valid mitigation measures"
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == 422
+
+
+def test_update_pia_empty_title_returns_422(client, db, test_user):
+    """Test POST /api/pias/{id} with empty title returns 422."""
+    # Create a test PIA
+    pia = PIA(
+        title="Original Title",
+        description="Original description",
+        data_types={"names": True},
+        data_flow_description="Original flow",
+        risk_level=RiskLevel.LOW,
+        mitigation_measures="Original measures",
+        status=PIAStatus.DRAFT,
+        organization_id=test_user.organization_id,
+        created_by=test_user.id
+    )
+    db.add(pia)
+    db.commit()
+    db.refresh(pia)
+
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code in (status.HTTP_200_OK, status.HTTP_303_SEE_OTHER, status.HTTP_302_FOUND)
+
+    # Try to update PIA with empty title
+    response = client.post(
+        f"/api/pias/{pia.id}",
+        data={
+            "title": "",
+            "description": "Valid description that is long enough",
+            "data_types_names": "false",
+            "data_types_addresses": "true",
+            "data_types_health": "false",
+            "data_types_financial": "false",
+            "data_types_gov_ids": "false",
+            "data_types_other": "false",
+            "data_flow_description": "Updated flow description",
+            "risk_level": "medium",
+            "mitigation_measures": "Updated mitigation measures"
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == 422
+
+
+def test_update_pia_invalid_risk_level_returns_422(client, db, test_user):
+    """Test POST /api/pias/{id} with invalid risk_level returns 422."""
+    # Create a test PIA
+    pia = PIA(
+        title="Original Title",
+        description="Original description",
+        data_types={"names": True},
+        data_flow_description="Original flow",
+        risk_level=RiskLevel.LOW,
+        mitigation_measures="Original measures",
+        status=PIAStatus.DRAFT,
+        organization_id=test_user.organization_id,
+        created_by=test_user.id
+    )
+    db.add(pia)
+    db.commit()
+    db.refresh(pia)
+
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code in (status.HTTP_200_OK, status.HTTP_303_SEE_OTHER, status.HTTP_302_FOUND)
+
+    # Try to update PIA with invalid risk_level
+    response = client.post(
+        f"/api/pias/{pia.id}",
+        data={
+            "title": "Valid Title",
+            "description": "Valid description that is long enough",
+            "data_types_names": "false",
+            "data_types_addresses": "true",
+            "data_types_health": "false",
+            "data_types_financial": "false",
+            "data_types_gov_ids": "false",
+            "data_types_other": "false",
+            "data_flow_description": "Updated flow description",
+            "risk_level": "invalid-level",
+            "mitigation_measures": "Updated mitigation measures"
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == 422
