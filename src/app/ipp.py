@@ -225,48 +225,34 @@ async def get_ipp_checklist(
 async def update_ipp_assessment(
     ipp_number: int,
     request: Request,
-    assessment_data: IPPAssessmentUpdate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """
-    Update an IPP assessment and return updated HTML fragment for HTMX.
+    """Update an IPP assessment from form data, return updated score HTML for HTMX."""
+    current_user = get_user_from_cookie(request, db)
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
 
-    Args:
-        ipp_number: IPP number (1-11)
-        request: FastAPI request object
-        assessment_data: Updated assessment data
-        current_user: Authenticated user
-        db: Database session
-
-    Returns:
-        HTMLResponse: Updated compliance score HTML fragment
-
-    Raises:
-        HTTPException: If IPP number is invalid or assessment not found
-    """
-    # Validate IPP number
     if ipp_number < 1 or ipp_number > 11:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="IPP number must be between 1 and 11"
-        )
+        raise HTTPException(status_code=400, detail="IPP number must be between 1 and 11")
 
-    # Get the assessment
     assessment = db.query(IPPAssessment).filter(
         IPPAssessment.organization_id == current_user.organization_id,
         IPPAssessment.ipp_number == ipp_number
     ).first()
 
     if not assessment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"IPP {ipp_number} assessment not found"
-        )
+        raise HTTPException(status_code=404, detail=f"IPP {ipp_number} assessment not found")
 
-    # Update the assessment
-    assessment.compliance_status = assessment_data.compliance_status
-    assessment.evidence_notes = assessment_data.evidence_notes
+    # Accept both form data and JSON
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        data = await request.json()
+    else:
+        form = await request.form()
+        data = dict(form)
+
+    assessment.compliance_status = data.get("compliance_status", assessment.compliance_status)
+    assessment.evidence_notes = data.get("evidence_notes", assessment.evidence_notes)
 
     db.commit()
     db.refresh(assessment)
