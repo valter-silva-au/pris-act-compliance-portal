@@ -209,7 +209,7 @@
         "PUT /api/settings updates organization details",
         "Security tests verify cross-tenant isolation"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-003"
       ]

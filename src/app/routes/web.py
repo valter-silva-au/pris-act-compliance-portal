@@ -1436,3 +1436,113 @@ async def update_incident_status(
         "status": incident.status.value,
         "badge_html": f'<span class="px-2 py-1 text-xs font-semibold rounded-full {badge_class}">{incident.status.value.replace("_", " ").title()}</span>'
     }
+
+
+# ============= ORGANIZATION SETTINGS =============
+
+@router.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request, db: Session = Depends(get_db), success: int = None):
+    """
+    Display organization settings page.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+        success: Optional success message flag
+
+    Returns:
+        HTMLResponse: Rendered settings page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get user's organization
+    organization = db.query(Organization).filter(
+        Organization.id == user.organization_id
+    ).first()
+
+    if not organization:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
+        )
+
+    return templates.TemplateResponse(
+        "settings.html",
+        {
+            "request": request,
+            "user": user,
+            "organization": organization,
+            "success_message": "Settings updated successfully!" if success else None
+        }
+    )
+
+
+@router.put("/api/settings")
+async def update_settings(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Update organization settings via API.
+
+    Args:
+        request: FastAPI request object with JSON body
+        db: Database session
+
+    Returns:
+        dict: Success message
+
+    Raises:
+        HTTPException: If not authenticated or organization not found
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+
+    # Get JSON body
+    body = await request.json()
+    name = body.get("name")
+    industry = body.get("industry")
+
+    if not name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization name is required"
+        )
+
+    # Get user's organization
+    organization = db.query(Organization).filter(
+        Organization.id == user.organization_id
+    ).first()
+
+    if not organization:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
+        )
+
+    # Update organization
+    organization.name = name
+    organization.industry = industry
+
+    # Create audit log
+    audit_log = AuditLog(
+        user_id=user.id,
+        action="update_organization_settings",
+        entity_type="Organization",
+        entity_id=organization.id,
+        details={
+            "name": name,
+            "industry": industry
+        }
+    )
+    db.add(audit_log)
+
+    db.commit()
+
+    return {"message": "Settings updated successfully"}
