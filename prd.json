@@ -489,7 +489,7 @@
         "python3 -m pytest tests/test_ipp.py -v passes with 0 failures",
         "python3 -m pytest tests/ passes with 0 failures total"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": []
     }
   ],
