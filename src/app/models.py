@@ -63,6 +63,13 @@ class ComplianceStatus(str, enum.Enum):
     NOT_ASSESSED = "not_assessed"
 
 
+class UserRole(str, enum.Enum):
+    """User role enum."""
+    ADMIN = "admin"
+    PRIVACY_OFFICER = "privacy_officer"
+    STAFF = "staff"
+
+
 class Organization(Base):
     """Organization model."""
     __tablename__ = "organizations"

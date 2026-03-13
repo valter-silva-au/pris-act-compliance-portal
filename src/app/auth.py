@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy.orm import Session
 
 from src.app.database import get_db
-from src.app.models import Organization, User
+from src.app.models import Organization, User, UserRole
 
 # Password hashing context
 # Configure passlib to work with newer bcrypt versions
@@ -64,6 +64,13 @@ class UserResponse(BaseModel):
     full_name: str
     role: str
     organization_id: int
+
+
+class UserInvite(BaseModel):
+    """User invitation request model."""
+    email: EmailStr
+    role: UserRole
+    full_name: str
 
 
 # Password hashing functions
@@ -187,6 +194,53 @@ async def get_current_user(
     return user
 
 
+def require_role(allowed_roles: list[UserRole]):
+    """
+    Create a dependency that requires the user to have one of the specified roles.
+
+    Args:
+        allowed_roles: List of roles that are allowed to access the endpoint
+
+    Returns:
+        A dependency function that checks the user's role
+    """
+    async def check_role(current_user: User = Depends(get_current_user)) -> User:
+        """Check if the current user has one of the allowed roles."""
+        if current_user.role not in [role.value for role in allowed_roles]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied. Required role: {', '.join([r.value for r in allowed_roles])}"
+            )
+        return current_user
+    return check_role
+
+
+# Role-specific dependencies for convenience
+async def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Require the current user to be an admin."""
+    if current_user.role != UserRole.ADMIN.value:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
+
+
+async def require_privacy_officer_or_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Require the current user to be a Privacy Officer or Admin."""
+    if current_user.role not in [UserRole.ADMIN.value, UserRole.PRIVACY_OFFICER.value]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Privacy Officer or Admin access required"
+        )
+    return current_user
+
+
+async def require_any_authenticated_user(current_user: User = Depends(get_current_user)) -> User:
+    """Require the current user to be authenticated (any role)."""
+    return current_user
+
+
 # Authentication endpoints
 @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
 def register(user_data: UserRegister, db: Session = Depends(get_db)):
@@ -274,3 +328,77 @@ def login(
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/users/invite", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
+def invite_user(
+    invite_data: UserInvite,
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """
+    Invite a new user to the organization (Admin only).
+
+    Creates a new user account with a temporary password that should be changed on first login.
+    Only admins can invite new users.
+
+    Args:
+        invite_data: User invitation data (email, role, full_name)
+        current_user: Current authenticated admin user
+        db: Database session
+
+    Returns:
+        UserResponse: The created user
+
+    Raises:
+        HTTPException: If email already exists or user is not admin
+    """
+    # Check if user already exists
+    existing_user = get_user_by_email(db, invite_data.email)
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+
+    # Create a temporary password (in production, this should be sent via email)
+    import secrets
+    temp_password = secrets.token_urlsafe(16)
+    hashed_password = get_password_hash(temp_password)
+
+    # Create user with the specified role
+    user = User(
+        email=invite_data.email,
+        hashed_password=hashed_password,
+        full_name=invite_data.full_name,
+        role=invite_data.role.value,
+        organization_id=current_user.organization_id
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+
+@router.get("/users/team", response_model=list[UserResponse])
+def get_team_members(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all users in the current user's organization.
+
+    Returns a list of all team members in the same organization as the current user.
+
+    Args:
+        current_user: Current authenticated user
+        db: Database session
+
+    Returns:
+        list[UserResponse]: List of users in the organization
+    """
+    users = db.query(User).filter(
+        User.organization_id == current_user.organization_id
+    ).all()
+    return users

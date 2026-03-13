@@ -1546,3 +1546,42 @@ async def update_settings(
     db.commit()
 
     return {"message": "Settings updated successfully"}
+
+
+# ============= TEAM MANAGEMENT =============
+
+@router.get("/settings/team", response_class=HTMLResponse)
+async def team_management_page(request: Request, db: Session = Depends(get_db)):
+    """
+    Display team management page showing all organization users.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+
+    Returns:
+        HTMLResponse: Rendered team management page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get all users in the same organization
+    team_members = db.query(User).filter(
+        User.organization_id == user.organization_id
+    ).order_by(User.full_name).all()
+
+    # Get user's organization
+    organization = db.query(Organization).filter(
+        Organization.id == user.organization_id
+    ).first()
+
+    return templates.TemplateResponse(
+        "team.html",
+        {
+            "request": request,
+            "user": user,
+            "team_members": team_members,
+            "organization": organization
+        }
+    )
