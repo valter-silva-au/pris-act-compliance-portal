@@ -461,7 +461,7 @@
         "Valid PIA creation still works",
         "python3 -m pytest tests/test_pias.py passes"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": []
     },
     {
