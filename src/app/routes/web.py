@@ -63,6 +63,29 @@ def get_current_user_from_cookie(request: Request, db: Session) -> User | None:
         return None
 
 
+def log_audit(db: Session, user_id: int, action: str, entity_type: str = None, entity_id: int = None, details: dict = None):
+    """
+    Create an audit log entry.
+
+    Args:
+        db: Database session
+        user_id: ID of the user performing the action
+        action: Action performed (e.g., "create_pia", "update_incident")
+        entity_type: Type of entity affected (e.g., "PIA", "Incident")
+        entity_id: ID of the entity affected
+        details: Additional details as a dictionary
+    """
+    audit_entry = AuditLog(
+        user_id=user_id,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        details=details
+    )
+    db.add(audit_entry)
+    # Note: caller should commit
+
+
 @router.get("/")
 async def root(request: Request, db: Session = Depends(get_db)):
     """
@@ -529,6 +552,16 @@ async def onboarding_step3(
         progress.step3_completed = 1
         progress.current_step = 4
 
+    # Log audit trail for IPP assessment completion
+    log_audit(
+        db=db,
+        user_id=user.id,
+        action="update_ipp_assessments",
+        entity_type="IPPAssessment",
+        entity_id=None,  # Multiple assessments updated
+        details={"step": "onboarding_step_3", "ipp_count": len(IPP_DEFINITIONS)}
+    )
+
     db.commit()
 
     # Calculate compliance score for summary
@@ -888,6 +921,8 @@ async def designate_privacy_officer(
         existing_officer.user_id = user_id
         existing_officer.designation_date = date.today()
         existing_officer.contact_phone = contact_phone
+        action = "update_privacy_officer"
+        officer_id = existing_officer.id
     else:
         # Create new privacy officer
         new_officer = PrivacyOfficer(
@@ -897,6 +932,19 @@ async def designate_privacy_officer(
             contact_phone=contact_phone
         )
         db.add(new_officer)
+        db.flush()  # Get the ID before commit
+        action = "designate_privacy_officer"
+        officer_id = new_officer.id
+
+    # Log audit trail
+    log_audit(
+        db=db,
+        user_id=current_user.id,
+        action=action,
+        entity_type="PrivacyOfficer",
+        entity_id=officer_id,
+        details={"designated_user_id": user_id, "user_email": selected_user.email}
+    )
 
     db.commit()
 
@@ -1058,6 +1106,18 @@ async def create_pia(
         created_by=user.id
     )
     db.add(new_pia)
+    db.flush()  # Get the ID before commit
+
+    # Log audit trail
+    log_audit(
+        db=db,
+        user_id=user.id,
+        action="create_pia",
+        entity_type="PIA",
+        entity_id=new_pia.id,
+        details={"title": title, "risk_level": risk_level, "status": PIAStatus.DRAFT.value}
+    )
+
     db.commit()
 
     # Redirect to PIAs list
@@ -1132,6 +1192,16 @@ async def update_pia(
     pia.data_flow_description = data_flow_description
     pia.risk_level = RiskLevel(risk_level)
     pia.mitigation_measures = mitigation_measures
+
+    # Log audit trail
+    log_audit(
+        db=db,
+        user_id=user.id,
+        action="update_pia",
+        entity_type="PIA",
+        entity_id=pia.id,
+        details={"title": title, "risk_level": risk_level}
+    )
 
     db.commit()
 
@@ -1480,6 +1550,18 @@ async def create_request(
         organization_id=user.organization_id
     )
     db.add(new_request)
+    db.flush()  # Get the ID before commit
+
+    # Log audit trail
+    log_audit(
+        db=db,
+        user_id=user.id,
+        action="create_access_request",
+        entity_type="AccessRequest",
+        entity_id=new_request.id,
+        details={"requester_name": requester_name, "request_type": request_type, "status": AccessRequestStatus.RECEIVED.value}
+    )
+
     db.commit()
 
     return RedirectResponse(url="/requests", status_code=status.HTTP_303_SEE_OTHER)
@@ -1553,6 +1635,16 @@ async def update_request(
     access_request.status = AccessRequestStatus(status_value)
     access_request.response_notes = response_notes if response_notes else None
     access_request.date_completed = parsed_date_completed
+
+    # Log audit trail
+    log_audit(
+        db=db,
+        user_id=user.id,
+        action="update_access_request",
+        entity_type="AccessRequest",
+        entity_id=access_request.id,
+        details={"requester_name": requester_name, "request_type": request_type, "status": status_value}
+    )
 
     db.commit()
 
@@ -1708,6 +1800,18 @@ async def create_incident(
         organization_id=user.organization_id
     )
     db.add(new_incident)
+    db.flush()  # Get the ID before commit
+
+    # Log audit trail
+    log_audit(
+        db=db,
+        user_id=user.id,
+        action="create_incident",
+        entity_type="BreachIncident",
+        entity_id=new_incident.id,
+        details={"title": title, "severity": severity, "status": BreachIncidentStatus.DETECTED.value}
+    )
+
     db.commit()
 
     return RedirectResponse(url="/incidents", status_code=status.HTTP_303_SEE_OTHER)
@@ -1805,6 +1909,16 @@ async def update_incident(
     incident.status = BreachIncidentStatus(status_value)
     incident.notification_date = parsed_notification_date
     incident.authority_notified = authority_notified if authority_notified else None
+
+    # Log audit trail
+    log_audit(
+        db=db,
+        user_id=user.id,
+        action="update_incident",
+        entity_type="BreachIncident",
+        entity_id=incident.id,
+        details={"title": title, "severity": severity, "status": status_value}
+    )
 
     db.commit()
 
@@ -2014,6 +2128,107 @@ async def team_management_page(request: Request, db: Session = Depends(get_db)):
             "user": user,
             "team_members": team_members,
             "organization": organization
+        }
+    )
+
+
+# ===============================================
+# Audit Log Routes
+# ===============================================
+
+@router.get("/audit-log", response_class=HTMLResponse)
+async def audit_log_page(
+    request: Request,
+    db: Session = Depends(get_db),
+    entity_type: str = None,
+    date_from: str = None,
+    date_to: str = None,
+    page: int = 1,
+    per_page: int = 50
+):
+    """
+    Display audit log page with filtering and pagination.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+        entity_type: Optional filter by entity type
+        date_from: Optional filter by start date (YYYY-MM-DD)
+        date_to: Optional filter by end date (YYYY-MM-DD)
+        page: Page number for pagination (default: 1)
+        per_page: Items per page (default: 50)
+
+    Returns:
+        HTMLResponse: Rendered audit log page
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Build query for audit logs filtered by organization
+    # Join with User to filter by organization
+    query = db.query(AuditLog).join(User, AuditLog.user_id == User.id).filter(
+        User.organization_id == user.organization_id
+    )
+
+    # Apply entity_type filter
+    if entity_type:
+        query = query.filter(AuditLog.entity_type == entity_type)
+
+    # Apply date range filters
+    if date_from:
+        try:
+            from datetime import datetime
+            start_date = datetime.strptime(date_from, "%Y-%m-%d")
+            query = query.filter(AuditLog.timestamp >= start_date)
+        except ValueError:
+            pass
+
+    if date_to:
+        try:
+            from datetime import datetime
+            end_date = datetime.strptime(date_to, "%Y-%m-%d")
+            # Add one day to include the entire end date
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+            query = query.filter(AuditLog.timestamp <= end_date)
+        except ValueError:
+            pass
+
+    # Order by timestamp descending (most recent first)
+    query = query.order_by(AuditLog.timestamp.desc())
+
+    # Get total count for pagination
+    total_count = query.count()
+
+    # Apply pagination
+    offset = (page - 1) * per_page
+    audit_logs = query.offset(offset).limit(per_page).all()
+
+    # Calculate pagination info
+    total_pages = (total_count + per_page - 1) // per_page
+    has_prev = page > 1
+    has_next = page < total_pages
+
+    # Get unique entity types for filter dropdown
+    entity_types = db.query(AuditLog.entity_type).distinct().all()
+    entity_types = [et[0] for et in entity_types if et[0]]
+
+    return templates.TemplateResponse(
+        "audit_log.html",
+        {
+            "request": request,
+            "user": user,
+            "audit_logs": audit_logs,
+            "entity_types": entity_types,
+            "selected_entity_type": entity_type,
+            "date_from": date_from,
+            "date_to": date_to,
+            "page": page,
+            "per_page": per_page,
+            "total_count": total_count,
+            "total_pages": total_pages,
+            "has_prev": has_prev,
+            "has_next": has_next
         }
     )
 
