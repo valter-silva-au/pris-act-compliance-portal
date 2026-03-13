@@ -383,7 +383,7 @@
         "Dashboard shows populated compliance data",
         "All seed data is scoped to the demo organization"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-021"
       ]
