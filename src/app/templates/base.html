@@ -83,6 +83,34 @@
                 <div class="flex justify-between items-center px-6 py-4">
                     <h2 class="text-2xl font-semibold text-gray-800">{% block page_title %}{% endblock %}</h2>
                     <div class="flex items-center space-x-4">
+                        <!-- Notification Bell -->
+                        <div class="relative">
+                            <button
+                                id="notification-bell"
+                                class="relative p-2 text-gray-600 hover:text-gray-800 focus:outline-none"
+                                hx-get="/api/notifications"
+                                hx-trigger="click"
+                                hx-target="#notification-dropdown"
+                                hx-swap="innerHTML"
+                            >
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                                </svg>
+                                <span
+                                    id="notification-badge"
+                                    class="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full"
+                                    hx-get="/api/notifications/count"
+                                    hx-trigger="load, every 30s"
+                                    hx-swap="innerHTML"
+                                ></span>
+                            </button>
+                            <!-- Notification Dropdown -->
+                            <div
+                                id="notification-dropdown"
+                                class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 hidden"
+                                style="z-index: 1000;"
+                            ></div>
+                        </div>
                         <span class="text-gray-700">{{ user.full_name }}</span>
                         <form action="/auth/logout" method="post" class="inline">
                             <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
@@ -100,6 +128,84 @@
             </main>
         </div>
     </div>
+
+    <script>
+        // Notification system JavaScript
+        document.addEventListener('DOMContentLoaded', function() {
+            const notificationBell = document.getElementById('notification-bell');
+            const notificationDropdown = document.getElementById('notification-dropdown');
+            const notificationBadge = document.getElementById('notification-badge');
+
+            // Toggle dropdown on bell click
+            if (notificationBell) {
+                notificationBell.addEventListener('click', function() {
+                    notificationDropdown.classList.toggle('hidden');
+                });
+            }
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!notificationBell.contains(event.target) && !notificationDropdown.contains(event.target)) {
+                    notificationDropdown.classList.add('hidden');
+                }
+            });
+
+            // Update badge count via HTMX response
+            document.body.addEventListener('htmx:afterSwap', function(event) {
+                if (event.detail.target.id === 'notification-badge') {
+                    const countText = event.detail.target.textContent.trim();
+                    if (countText === '' || countText === '0') {
+                        event.detail.target.style.display = 'none';
+                    } else {
+                        event.detail.target.style.display = 'inline-flex';
+                    }
+                }
+
+                // Handle notification list response
+                if (event.detail.target.id === 'notification-dropdown') {
+                    const response = JSON.parse(event.detail.xhr.response);
+                    if (response.notifications && response.notifications.length > 0) {
+                        let html = '<div class="p-4"><h3 class="text-lg font-semibold mb-2">Notifications</h3>';
+                        html += '<ul class="space-y-2">';
+                        response.notifications.forEach(function(notification) {
+                            const date = new Date(notification.created_at).toLocaleString();
+                            html += '<li class="border-b pb-2">';
+                            if (notification.link) {
+                                html += '<a href="' + notification.link + '" class="block hover:bg-gray-50 p-2 rounded" onclick="markAsRead(' + notification.id + ')">';
+                            } else {
+                                html += '<div class="block p-2">';
+                            }
+                            html += '<p class="text-sm text-gray-800">' + notification.message + '</p>';
+                            html += '<p class="text-xs text-gray-500 mt-1">' + date + '</p>';
+                            if (notification.link) {
+                                html += '</a>';
+                            } else {
+                                html += '</div>';
+                            }
+                            html += '</li>';
+                        });
+                        html += '</ul></div>';
+                        event.detail.target.innerHTML = html;
+                    } else {
+                        event.detail.target.innerHTML = '<div class="p-4 text-center text-gray-500">No new notifications</div>';
+                    }
+                }
+            });
+        });
+
+        // Mark notification as read
+        function markAsRead(notificationId) {
+            fetch('/api/notifications/' + notificationId + '/read', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            }).then(function() {
+                // Refresh notification count
+                htmx.trigger('#notification-badge', 'load');
+            });
+        }
+    </script>
 
     {% block extra_scripts %}{% endblock %}
 </body>

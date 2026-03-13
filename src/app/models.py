@@ -109,6 +109,7 @@ class User(Base):
     privacy_officer_profile = relationship("PrivacyOfficer", back_populates="user", uselist=False)
     created_pias = relationship("PIA", back_populates="creator", foreign_keys="PIA.created_by")
     audit_logs = relationship("AuditLog", back_populates="user")
+    notifications = relationship("Notification", back_populates="user")
 
 
 class OnboardingProgress(Base):
@@ -259,3 +260,18 @@ class AuditLog(Base):
 
     # Relationships
     user = relationship("User", back_populates="audit_logs")
+
+
+class Notification(Base):
+    """Notification model for in-app notifications."""
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    message = Column(Text, nullable=False)
+    link = Column(String(255))
+    read = Column(Integer, default=0)  # SQLite uses INTEGER for BOOLEAN (0=False, 1=True)
+    created_at = Column(DateTime, default=utc_now, index=True)
+
+    # Relationships
+    user = relationship("User", back_populates="notifications")

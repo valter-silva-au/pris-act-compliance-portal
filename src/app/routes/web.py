@@ -18,7 +18,13 @@ from src.app.database import get_db
 from src.app.models import (
     Organization, User, PrivacyOfficer, PIA, PIAStatus, RiskLevel, DataRegister,
     AccessRequest, RequestType, AccessRequestStatus, BreachIncident, BreachIncidentStatus,
-    IPPAssessment, ComplianceStatus, AuditLog, OnboardingProgress
+    IPPAssessment, ComplianceStatus, AuditLog, OnboardingProgress, Notification
+)
+from src.app.notifications import (
+    get_unread_notifications,
+    mark_notification_as_read,
+    get_unread_count,
+    check_and_create_all_reminders
 )
 from datetime import date, timedelta
 import json
@@ -2008,3 +2014,92 @@ async def team_management_page(request: Request, db: Session = Depends(get_db)):
             "organization": organization
         }
     )
+
+
+# ===============================================
+# Notification API Routes
+# ===============================================
+
+@router.get("/api/notifications")
+async def get_notifications(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Get unread notifications for the current user.
+
+    Returns:
+        JSON list of unread notifications
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    # Check for new reminders
+    check_and_create_all_reminders(db, user.organization_id)
+
+    # Get unread notifications
+    notifications = get_unread_notifications(db, user.id)
+
+    return {
+        "notifications": [
+            {
+                "id": n.id,
+                "message": n.message,
+                "link": n.link,
+                "created_at": n.created_at.isoformat(),
+            }
+            for n in notifications
+        ],
+        "count": len(notifications)
+    }
+
+
+@router.post("/api/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: int,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Mark a notification as read.
+
+    Args:
+        notification_id: ID of the notification to mark as read
+
+    Returns:
+        Success status
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+
+    success = mark_notification_as_read(db, notification_id, user.id)
+
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+    return {"status": "ok"}
+
+
+@router.get("/api/notifications/count", response_class=HTMLResponse)
+async def get_notification_count(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Get count of unread notifications for the current user.
+
+    Returns:
+        HTML with unread count
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return "0"
+
+    # Check for new reminders
+    check_and_create_all_reminders(db, user.organization_id)
+
+    count = get_unread_count(db, user.id)
+
+    return str(count) if count > 0 else ""
