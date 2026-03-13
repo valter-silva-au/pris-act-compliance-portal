@@ -1355,6 +1355,36 @@ async def create_data_register_entry(
     if not user:
         return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
 
+    # Validate data_category (2-200 chars, required)
+    valid, error = validate_required_string(data_category, "Data category", min_len=2, max_len=200)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
+    # Validate description (required, max 2000 chars)
+    valid, error = validate_required_string(description, "Description", min_len=1, max_len=2000)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
+    # Validate storage_location (required, 2-500 chars)
+    valid, error = validate_required_string(storage_location, "Storage location", min_len=2, max_len=500)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
+    # Validate access_controls (required, max 1000 chars)
+    valid, error = validate_required_string(access_controls, "Access controls", min_len=1, max_len=1000)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
+    # Validate retention_period (required, max 200 chars)
+    valid, error = validate_required_string(retention_period, "Retention period", min_len=1, max_len=200)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
+    # Validate legal_basis (required, max 500 chars)
+    valid, error = validate_required_string(legal_basis, "Legal basis", min_len=1, max_len=500)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
     # Parse date if provided
     parsed_date = None
     if date_last_reviewed:
@@ -1416,6 +1446,36 @@ async def update_data_register_entry(
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Validate data_category (2-200 chars, required)
+    valid, error = validate_required_string(data_category, "Data category", min_len=2, max_len=200)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
+    # Validate description (required, max 2000 chars)
+    valid, error = validate_required_string(description, "Description", min_len=1, max_len=2000)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
+    # Validate storage_location (required, 2-500 chars)
+    valid, error = validate_required_string(storage_location, "Storage location", min_len=2, max_len=500)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
+    # Validate access_controls (required, max 1000 chars)
+    valid, error = validate_required_string(access_controls, "Access controls", min_len=1, max_len=1000)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
+    # Validate retention_period (required, max 200 chars)
+    valid, error = validate_required_string(retention_period, "Retention period", min_len=1, max_len=200)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
+
+    # Validate legal_basis (required, max 500 chars)
+    valid, error = validate_required_string(legal_basis, "Legal basis", min_len=1, max_len=500)
+    if not valid:
+        raise HTTPException(status_code=422, detail=error)
 
     # Get the data register entry
     entry = db.query(DataRegister).filter(

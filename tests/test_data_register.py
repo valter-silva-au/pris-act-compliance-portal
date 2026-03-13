@@ -101,7 +101,7 @@ def test_create_data_register_entry(client, db, test_user):
 
 
 def test_create_data_register_entry_minimal(client, db, test_user):
-    """Test POST /api/data-register with only required fields."""
+    """Test POST /api/data-register with all required fields."""
     # Login first
     response = client.post(
         "/web/login",
@@ -109,11 +109,16 @@ def test_create_data_register_entry_minimal(client, db, test_user):
     )
     assert response.status_code == status.HTTP_200_OK
 
-    # Create data register entry with only category
+    # Create data register entry with all required fields
     response = client.post(
         "/api/data-register",
         data={
             "data_category": "Minimal Entry",
+            "description": "Test description",
+            "storage_location": "Test location",
+            "access_controls": "Test access",
+            "retention_period": "1 year",
+            "legal_basis": "Consent",
         },
         follow_redirects=False
     )
@@ -124,8 +129,8 @@ def test_create_data_register_entry_minimal(client, db, test_user):
         DataRegister.data_category == "Minimal Entry"
     ).first()
     assert entry is not None
-    assert entry.description is None
-    assert entry.storage_location is None
+    assert entry.description is not None
+    assert entry.storage_location is not None
     assert entry.organization_id == test_user.organization_id
 
 
@@ -192,11 +197,16 @@ def test_update_data_register_entry_not_found(client, test_user):
     )
     assert response.status_code == status.HTTP_200_OK
 
-    # Try to update non-existent entry
+    # Try to update non-existent entry (with all required fields for validation)
     response = client.post(
         "/api/data-register/99999",
         data={
             "data_category": "Test",
+            "description": "Test description",
+            "storage_location": "Test location",
+            "access_controls": "Test access",
+            "retention_period": "Test period",
+            "legal_basis": "Test basis",
         },
         follow_redirects=False
     )
@@ -320,7 +330,14 @@ def test_multi_tenant_isolation(client, db, test_org, test_user):
     # Verify first user cannot update second org's entry
     response = client.post(
         f"/api/data-register/{entry2.id}",
-        data={"data_category": "Hacked"},
+        data={
+            "data_category": "Hacked",
+            "description": "Hacked description",
+            "storage_location": "Hacked location",
+            "access_controls": "Hacked access",
+            "retention_period": "Hacked period",
+            "legal_basis": "Hacked basis",
+        },
         follow_redirects=False
     )
     assert response.status_code == status.HTTP_404_NOT_FOUND
@@ -408,3 +425,286 @@ def test_data_register_table_structure(client, test_user):
     assert "Retention Period" in content
     assert "Last Reviewed" in content
     assert "Actions" in content or "Edit" in content or "Delete" in content
+
+
+def test_create_data_register_validation_empty_data_category(client, test_user):
+    """Test POST /api/data-register with empty data_category returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create with whitespace-only data_category (passes FastAPI but fails our validation)
+    response = client.post(
+        "/api/data-register",
+        data={
+            "data_category": "   ",
+            "description": "Test description",
+            "storage_location": "Test location",
+            "access_controls": "Test access",
+            "retention_period": "1 year",
+            "legal_basis": "Consent",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Data category" in response.json()["detail"]
+
+
+def test_create_data_register_validation_data_category_too_short(client, test_user):
+    """Test POST /api/data-register with data_category too short returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create with 1-char data_category (min is 2)
+    response = client.post(
+        "/api/data-register",
+        data={
+            "data_category": "A",
+            "description": "Test description",
+            "storage_location": "Test location",
+            "access_controls": "Test access",
+            "retention_period": "1 year",
+            "legal_basis": "Consent",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "at least 2 characters" in response.json()["detail"]
+
+
+def test_create_data_register_validation_data_category_too_long(client, test_user):
+    """Test POST /api/data-register with data_category too long returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create with 201-char data_category (max is 200)
+    long_category = "A" * 201
+    response = client.post(
+        "/api/data-register",
+        data={
+            "data_category": long_category,
+            "description": "Test description",
+            "storage_location": "Test location",
+            "access_controls": "Test access",
+            "retention_period": "1 year",
+            "legal_basis": "Consent",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "at most 200 characters" in response.json()["detail"]
+
+
+def test_create_data_register_validation_missing_description(client, test_user):
+    """Test POST /api/data-register with missing description returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create without description
+    response = client.post(
+        "/api/data-register",
+        data={
+            "data_category": "Test Category",
+            "storage_location": "Test location",
+            "access_controls": "Test access",
+            "retention_period": "1 year",
+            "legal_basis": "Consent",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Description" in response.json()["detail"]
+
+
+def test_create_data_register_validation_missing_storage_location(client, test_user):
+    """Test POST /api/data-register with missing storage_location returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create without storage_location
+    response = client.post(
+        "/api/data-register",
+        data={
+            "data_category": "Test Category",
+            "description": "Test description",
+            "access_controls": "Test access",
+            "retention_period": "1 year",
+            "legal_basis": "Consent",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Storage location" in response.json()["detail"]
+
+
+def test_create_data_register_validation_missing_access_controls(client, test_user):
+    """Test POST /api/data-register with missing access_controls returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create without access_controls
+    response = client.post(
+        "/api/data-register",
+        data={
+            "data_category": "Test Category",
+            "description": "Test description",
+            "storage_location": "Test location",
+            "retention_period": "1 year",
+            "legal_basis": "Consent",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Access controls" in response.json()["detail"]
+
+
+def test_create_data_register_validation_missing_retention_period(client, test_user):
+    """Test POST /api/data-register with missing retention_period returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create without retention_period
+    response = client.post(
+        "/api/data-register",
+        data={
+            "data_category": "Test Category",
+            "description": "Test description",
+            "storage_location": "Test location",
+            "access_controls": "Test access",
+            "legal_basis": "Consent",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Retention period" in response.json()["detail"]
+
+
+def test_create_data_register_validation_missing_legal_basis(client, test_user):
+    """Test POST /api/data-register with missing legal_basis returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create without legal_basis
+    response = client.post(
+        "/api/data-register",
+        data={
+            "data_category": "Test Category",
+            "description": "Test description",
+            "storage_location": "Test location",
+            "access_controls": "Test access",
+            "retention_period": "1 year",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Legal basis" in response.json()["detail"]
+
+
+def test_update_data_register_validation_empty_data_category(client, db, test_user):
+    """Test POST /api/data-register/{id} with empty data_category returns 422."""
+    # Create a test entry
+    entry = DataRegister(
+        data_category="Original Category",
+        description="Original description",
+        storage_location="Original location",
+        access_controls="Original access",
+        retention_period="Original period",
+        legal_basis="Original basis",
+        organization_id=test_user.organization_id
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to update with whitespace-only data_category (passes FastAPI but fails our validation)
+    response = client.post(
+        f"/api/data-register/{entry.id}",
+        data={
+            "data_category": "   ",
+            "description": "Updated description",
+            "storage_location": "Updated location",
+            "access_controls": "Updated access",
+            "retention_period": "Updated period",
+            "legal_basis": "Updated basis",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Data category" in response.json()["detail"]
+
+
+def test_update_data_register_validation_missing_required_fields(client, db, test_user):
+    """Test POST /api/data-register/{id} with missing required fields returns 422."""
+    # Create a test entry
+    entry = DataRegister(
+        data_category="Original Category",
+        description="Original description",
+        storage_location="Original location",
+        access_controls="Original access",
+        retention_period="Original period",
+        legal_basis="Original basis",
+        organization_id=test_user.organization_id
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to update without description
+    response = client.post(
+        f"/api/data-register/{entry.id}",
+        data={
+            "data_category": "Updated Category",
+            "storage_location": "Updated location",
+            "access_controls": "Updated access",
+            "retention_period": "Updated period",
+            "legal_basis": "Updated basis",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Description" in response.json()["detail"]

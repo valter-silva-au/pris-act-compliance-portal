@@ -448,7 +448,7 @@
         "Valid data register creation still works",
         "python3 -m pytest tests/test_data_register.py passes"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": []
     },
     {
