@@ -1212,7 +1212,7 @@ async def update_pia(
     return RedirectResponse(url=f"/pias/{pia_id}", status_code=status.HTTP_303_SEE_OTHER)
 
 
-@router.patch("/api/pias/{pia_id}/status")
+@router.post("/api/pias/{pia_id}/status")
 async def update_pia_status(
     request: Request,
     pia_id: int,
