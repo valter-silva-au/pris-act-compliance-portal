@@ -308,7 +308,7 @@
         "Health check endpoint responds correctly from container",
         ".dockerignore excludes unnecessary files"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-001"
       ]
