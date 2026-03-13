@@ -1,5 +1,7 @@
 # WA PRIS Act Compliance Portal
 
+![CI](https://github.com/valter-silva-au/pris-act-compliance-portal/actions/workflows/ci.yml/badge.svg)
+
 A web application for Western Australian Contracted Service Providers (CSPs) to manage privacy compliance under the Privacy and Responsible Information Sharing Act 2024.
 
 ## The Problem
