@@ -368,7 +368,7 @@
         "Audit entries include user, action, entity_type, entity_id, timestamp",
         "Tests verify audit entries are created on CRUD operations"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-021"
       ]
