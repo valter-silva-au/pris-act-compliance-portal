@@ -421,7 +421,75 @@
         "Tests cover valid and invalid cases for all validators",
         "python3 -m pytest tests/ passes with 0 errors"
       ],
-      "status": "blocked",
+      "status": "done",
+      "dependencies": []
+    },
+    {
+      "id": "TASK-027",
+      "title": "Wire validation into incident creation and update routes",
+      "description": "In src/app/routes/web.py, import validators from src/app/validators.py. In the create_incident endpoint (POST /api/incidents): validate title (3-200 chars required), description (10-5000 chars required), severity (must be one of low/medium/high/critical), affected_records_count (non-negative integer). In the update_incident endpoint (POST /api/incidents/{id}): apply same validations. On validation failure, raise HTTPException(status_code=422, detail=error_message). Write tests in tests/test_incidents.py verifying that invalid input returns 422.",
+      "acceptance_criteria": [
+        "POST /api/incidents with empty title returns 422",
+        "POST /api/incidents with invalid severity returns 422",
+        "POST /api/incidents with negative affected_records_count returns 422",
+        "Valid incident creation still works (returns 303 redirect)",
+        "python3 -m pytest tests/test_incidents.py passes"
+      ],
+      "status": "pending",
+      "dependencies": []
+    },
+    {
+      "id": "TASK-028",
+      "title": "Wire validation into data register routes",
+      "description": "In src/app/routes/web.py, in the create_data_register_entry endpoint (POST /api/data-register): validate data_category (2-200 chars required), description (required, max 2000 chars), storage_location (required, 2-500 chars), access_controls (required, max 1000 chars), retention_period (required, max 200 chars), legal_basis (required, max 500 chars). Use validate_required_string from src/app/validators.py. On failure, raise HTTPException(status_code=422). Apply same to update endpoint. Write tests verifying 422 on invalid input.",
+      "acceptance_criteria": [
+        "POST /api/data-register with empty data_category returns 422",
+        "POST /api/data-register with missing required fields returns 422",
+        "Valid data register creation still works",
+        "python3 -m pytest tests/test_data_register.py passes"
+      ],
+      "status": "pending",
+      "dependencies": []
+    },
+    {
+      "id": "TASK-029",
+      "title": "Wire validation into PIA creation and update routes",
+      "description": "In src/app/routes/web.py, in the create_pia endpoint (POST /api/pias): validate title (3-200 chars required), description (10-5000 chars required), risk_level (must be one of low/medium/high/critical), data_flow_description (max 5000 chars), mitigation_measures (max 5000 chars). Use validators from src/app/validators.py. On failure, raise HTTPException(status_code=422). Apply same to update endpoint (POST /api/pias/{id}). Write tests verifying 422 on invalid input.",
+      "acceptance_criteria": [
+        "POST /api/pias with empty title returns 422",
+        "POST /api/pias with invalid risk_level returns 422",
+        "Valid PIA creation still works",
+        "python3 -m pytest tests/test_pias.py passes"
+      ],
+      "status": "pending",
+      "dependencies": []
+    },
+    {
+      "id": "TASK-030",
+      "title": "Add HTML5 validation attributes to all form templates",
+      "description": "Update ALL HTML form templates in src/app/templates/ to add HTML5 validation attributes to every input field. Specifically: (1) register.html: add required, type=email, minlength=8 on password, minlength=2 maxlength=100 on full_name, minlength=2 maxlength=200 on org_name. (2) pias_new.html and pias_detail.html: add required minlength=3 maxlength=200 on title, required minlength=10 maxlength=5000 on description. (3) incidents.html and incidents_detail.html: add required minlength=3 maxlength=200 on title, required on severity select. (4) data_register.html: add required minlength=2 on data_category, required on description, storage_location, access_controls, retention_period, legal_basis. (5) requests.html: add required minlength=2 on requester_name, required type=email on requester_email, required on request_type select. Do NOT change any Python code, only HTML templates.",
+      "acceptance_criteria": [
+        "register.html has required and minlength/maxlength on all inputs",
+        "PIA forms have required and length constraints on title and description",
+        "Incident forms have required on title and severity",
+        "Data register form has required on all fields",
+        "Request form has required and type=email on email field",
+        "All existing tests still pass"
+      ],
+      "status": "pending",
+      "dependencies": []
+    },
+    {
+      "id": "TASK-031",
+      "title": "Fix IPP checklist tests to use cookie authentication",
+      "description": "The tests in tests/test_ipp.py use Authorization header auth but the IPP routes now use cookie-based auth. Fix ALL tests in test_ipp.py to: (1) Log in via POST /web/login to get a session cookie, (2) Use the cookie for subsequent requests instead of Authorization header. The login creates a cookie called access_token. The TestClient preserves cookies across requests. Remove any Authorization header usage. Ensure all 12 tests in test_ipp.py pass.",
+      "acceptance_criteria": [
+        "All tests in test_ipp.py use cookie auth (POST /web/login first)",
+        "No Authorization header usage in test_ipp.py",
+        "python3 -m pytest tests/test_ipp.py -v passes with 0 failures",
+        "python3 -m pytest tests/ passes with 0 failures total"
+      ],
+      "status": "pending",
       "dependencies": []
     }
   ],
