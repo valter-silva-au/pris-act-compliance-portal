@@ -1,24 +1,38 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}WA PRIS Act Compliance Portal{% endblock %}</title>
 
-    <!-- Tailwind CSS via CDN -->
+    <!-- Tailwind CSS via CDN with dark mode -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
 
     <!-- HTMX via CDN -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 
+    <!-- Theme: apply before render to prevent flash -->
+    <script>
+        (function() {
+            var theme = localStorage.getItem('theme') || 'system';
+            if (theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.documentElement.classList.remove('light');
+            }
+        })();
+    </script>
+
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
     <div class="flex h-screen">
         <!-- Sidebar Navigation -->
         {% if user %}
-        <aside class="w-64 bg-gray-800 text-white flex flex-col">
-            <div class="p-4 bg-gray-900">
+        <aside class="w-64 bg-gray-800 dark:bg-gray-950 text-white flex flex-col">
+            <div class="p-4 bg-gray-900 dark:bg-black">
                 <h1 class="text-xl font-bold">PRIS Act Portal</h1>
             </div>
             <nav class="flex-1 p-4 space-y-2">
@@ -79,15 +93,27 @@
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Top Bar -->
             {% if user %}
-            <header class="bg-white shadow-sm">
+            <header class="bg-white dark:bg-gray-800 shadow-sm">
                 <div class="flex justify-between items-center px-6 py-4">
-                    <h2 class="text-2xl font-semibold text-gray-800">{% block page_title %}{% endblock %}</h2>
+                    <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">{% block page_title %}{% endblock %}</h2>
                     <div class="flex items-center space-x-4">
+                        <!-- Theme Selector -->
+                        <div class="relative">
+                            <select id="theme-select" onchange="setTheme(this.value)"
+                                class="appearance-none bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm rounded-lg px-3 py-1.5 pr-8 border border-gray-300 dark:border-gray-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                                <option value="system">System</option>
+                            </select>
+                            <svg class="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
                         <!-- Notification Bell -->
                         <div class="relative">
                             <button
                                 id="notification-bell"
-                                class="relative p-2 text-gray-600 hover:text-gray-800 focus:outline-none"
+                                class="relative p-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white focus:outline-none"
                                 hx-get="/api/notifications"
                                 hx-trigger="click"
                                 hx-target="#notification-dropdown"
@@ -107,11 +133,11 @@
                             <!-- Notification Dropdown -->
                             <div
                                 id="notification-dropdown"
-                                class="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 hidden"
+                                class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 hidden"
                                 style="z-index: 1000;"
                             ></div>
                         </div>
-                        <span class="text-gray-700">{{ user.full_name }}</span>
+                        <span class="text-gray-700 dark:text-gray-200">{{ user.full_name }}</span>
                         <form action="/auth/logout" method="post" class="inline">
                             <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
                                 Logout
@@ -130,80 +156,76 @@
     </div>
 
     <script>
-        // Notification system JavaScript
-        document.addEventListener('DOMContentLoaded', function() {
-            const notificationBell = document.getElementById('notification-bell');
-            const notificationDropdown = document.getElementById('notification-dropdown');
-            const notificationBadge = document.getElementById('notification-badge');
+        // Theme management
+        function setTheme(theme) {
+            localStorage.setItem('theme', theme);
+            applyTheme(theme);
+        }
 
-            // Toggle dropdown on bell click
+        function applyTheme(theme) {
+            var isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', isDark);
+            document.documentElement.classList.toggle('light', !isDark);
+        }
+
+        // Set dropdown to stored value on load
+        document.addEventListener('DOMContentLoaded', function() {
+            var stored = localStorage.getItem('theme') || 'system';
+            var select = document.getElementById('theme-select');
+            if (select) select.value = stored;
+
+            // Listen for system theme changes
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function() {
+                if (localStorage.getItem('theme') === 'system') applyTheme('system');
+            });
+        });
+
+        // Notification system
+        document.addEventListener('DOMContentLoaded', function() {
+            var notificationBell = document.getElementById('notification-bell');
+            var notificationDropdown = document.getElementById('notification-dropdown');
+
             if (notificationBell) {
                 notificationBell.addEventListener('click', function() {
                     notificationDropdown.classList.toggle('hidden');
                 });
             }
 
-            // Close dropdown when clicking outside
             document.addEventListener('click', function(event) {
-                if (!notificationBell.contains(event.target) && !notificationDropdown.contains(event.target)) {
+                if (notificationBell && !notificationBell.contains(event.target) && !notificationDropdown.contains(event.target)) {
                     notificationDropdown.classList.add('hidden');
                 }
             });
 
-            // Update badge count via HTMX response
             document.body.addEventListener('htmx:afterSwap', function(event) {
                 if (event.detail.target.id === 'notification-badge') {
-                    const countText = event.detail.target.textContent.trim();
-                    if (countText === '' || countText === '0') {
-                        event.detail.target.style.display = 'none';
-                    } else {
-                        event.detail.target.style.display = 'inline-flex';
-                    }
+                    var countText = event.detail.target.textContent.trim();
+                    event.detail.target.style.display = (countText === '' || countText === '0') ? 'none' : 'inline-flex';
                 }
-
-                // Handle notification list response
                 if (event.detail.target.id === 'notification-dropdown') {
-                    const response = JSON.parse(event.detail.xhr.response);
+                    var response = JSON.parse(event.detail.xhr.response);
                     if (response.notifications && response.notifications.length > 0) {
-                        let html = '<div class="p-4"><h3 class="text-lg font-semibold mb-2">Notifications</h3>';
-                        html += '<ul class="space-y-2">';
-                        response.notifications.forEach(function(notification) {
-                            const date = new Date(notification.created_at).toLocaleString();
-                            html += '<li class="border-b pb-2">';
-                            if (notification.link) {
-                                html += '<a href="' + notification.link + '" class="block hover:bg-gray-50 p-2 rounded" onclick="markAsRead(' + notification.id + ')">';
-                            } else {
-                                html += '<div class="block p-2">';
-                            }
-                            html += '<p class="text-sm text-gray-800">' + notification.message + '</p>';
-                            html += '<p class="text-xs text-gray-500 mt-1">' + date + '</p>';
-                            if (notification.link) {
-                                html += '</a>';
-                            } else {
-                                html += '</div>';
-                            }
+                        var html = '<div class="p-4"><h3 class="text-lg font-semibold mb-2 dark:text-white">Notifications</h3><ul class="space-y-2">';
+                        response.notifications.forEach(function(n) {
+                            html += '<li class="border-b dark:border-gray-600 pb-2">';
+                            html += n.link ? '<a href="' + n.link + '" class="block hover:bg-gray-50 dark:hover:bg-gray-700 p-2 rounded" onclick="markAsRead(' + n.id + ')">' : '<div class="block p-2">';
+                            html += '<p class="text-sm text-gray-800 dark:text-gray-200">' + n.message + '</p>';
+                            html += '<p class="text-xs text-gray-500 mt-1">' + new Date(n.created_at).toLocaleString() + '</p>';
+                            html += n.link ? '</a>' : '</div>';
                             html += '</li>';
                         });
                         html += '</ul></div>';
                         event.detail.target.innerHTML = html;
                     } else {
-                        event.detail.target.innerHTML = '<div class="p-4 text-center text-gray-500">No new notifications</div>';
+                        event.detail.target.innerHTML = '<div class="p-4 text-center text-gray-500 dark:text-gray-400">No new notifications</div>';
                     }
                 }
             });
         });
 
-        // Mark notification as read
-        function markAsRead(notificationId) {
-            fetch('/api/notifications/' + notificationId + '/read', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            }).then(function() {
-                // Refresh notification count
-                htmx.trigger('#notification-badge', 'load');
-            });
+        function markAsRead(id) {
+            fetch('/api/notifications/' + id + '/read', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
+                .then(function() { htmx.trigger('#notification-badge', 'load'); });
         }
     </script>
 
