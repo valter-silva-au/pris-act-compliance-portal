@@ -107,7 +107,7 @@ async def root(request: Request, db: Session = Depends(get_db)):
             return RedirectResponse(url="/onboarding", status_code=status.HTTP_302_FOUND)
         return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
     # Show public landing page when not authenticated
-    return templates.TemplateResponse("landing.html", {"request": request})
+    return templates.TemplateResponse(request, "landing.html")
 
 
 @router.get("/web/login", response_class=HTMLResponse)
@@ -121,7 +121,7 @@ async def login_page(request: Request):
     Returns:
         HTMLResponse: Rendered login page
     """
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html")
 
 
 @router.post("/web/login", response_class=RedirectResponse)
@@ -146,8 +146,9 @@ async def login_submit(
     user = authenticate_user(db, username, password)
     if not user:
         return templates.TemplateResponse(
+            request,
             "login.html",
-            {"request": request, "error": "Invalid email or password"},
+            {"error": "Invalid email or password"},
             status_code=status.HTTP_401_UNAUTHORIZED
         )
 
@@ -184,7 +185,7 @@ async def register_page(request: Request):
     Returns:
         HTMLResponse: Rendered registration page
     """
-    return templates.TemplateResponse("register.html", {"request": request})
+    return templates.TemplateResponse(request, "register.html")
 
 
 @router.post("/web/register", response_class=RedirectResponse)
@@ -215,8 +216,9 @@ async def register_submit(
     # Validate passwords match
     if password != confirm_password:
         return templates.TemplateResponse(
+            request,
             "register.html",
-            {"request": request, "error": "Passwords do not match"},
+            {"error": "Passwords do not match"},
             status_code=status.HTTP_400_BAD_REQUEST
         )
 
@@ -224,8 +226,9 @@ async def register_submit(
     existing_user = get_user_by_email(db, email)
     if existing_user:
         return templates.TemplateResponse(
+            request,
             "register.html",
-            {"request": request, "error": "Email already registered"},
+            {"error": "Email already registered"},
             status_code=status.HTTP_400_BAD_REQUEST
         )
 
@@ -326,9 +329,9 @@ async def onboarding(request: Request, db: Session = Depends(get_db)):
     )
 
     return templates.TemplateResponse(
+        request,
         "onboarding.html",
         {
-            "request": request,
             "user": user,
             "org": org,
             "progress": progress,
@@ -389,9 +392,9 @@ async def onboarding_step1(
     ).all()
 
     return templates.TemplateResponse(
+        request,
         "onboarding_step2.html",
         {
-            "request": request,
             "user": user,
             "progress": progress,
             "team_members": team_members
@@ -484,9 +487,9 @@ async def onboarding_step2(
     from src.app.ipp import IPP_DEFINITIONS
 
     return templates.TemplateResponse(
+        request,
         "onboarding_step3.html",
         {
-            "request": request,
             "user": user,
             "progress": progress,
             "ipp_definitions": IPP_DEFINITIONS
@@ -575,9 +578,9 @@ async def onboarding_step3(
     )
 
     return templates.TemplateResponse(
+        request,
         "onboarding_step4.html",
         {
-            "request": request,
             "user": user,
             "progress": progress,
             "compliant_count": compliant_count,
@@ -655,9 +658,9 @@ async def onboarding_back(
 
     if step == 1:
         return templates.TemplateResponse(
+            request,
             "onboarding_step1.html",
             {
-                "request": request,
                 "user": user,
                 "org": org,
                 "progress": progress
@@ -668,9 +671,9 @@ async def onboarding_back(
             User.organization_id == user.organization_id
         ).all()
         return templates.TemplateResponse(
+            request,
             "onboarding_step2.html",
             {
-                "request": request,
                 "user": user,
                 "progress": progress,
                 "team_members": team_members
@@ -679,9 +682,9 @@ async def onboarding_back(
     elif step == 3:
         from src.app.ipp import IPP_DEFINITIONS
         return templates.TemplateResponse(
+            request,
             "onboarding_step3.html",
             {
-                "request": request,
                 "user": user,
                 "progress": progress,
                 "ipp_definitions": IPP_DEFINITIONS
@@ -775,9 +778,9 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     ).order_by(AuditLog.timestamp.desc()).limit(5).all()
 
     return templates.TemplateResponse(
+        request,
         "dashboard.html",
         {
-            "request": request,
             "user": user,
             "ipp_compliance": {
                 "compliant": compliant_count,
@@ -829,9 +832,9 @@ async def privacy_officer_page(request: Request, db: Session = Depends(get_db)):
     ).all()
 
     return templates.TemplateResponse(
+        request,
         "privacy_officer.html",
         {
-            "request": request,
             "user": user,
             "officer": officer,
             "org_users": org_users
@@ -880,9 +883,9 @@ async def designate_privacy_officer(
             PrivacyOfficer.organization_id == current_user.organization_id
         ).first()
         return templates.TemplateResponse(
+            request,
             "privacy_officer.html",
             {
-                "request": request,
                 "user": current_user,
                 "officer": officer,
                 "org_users": org_users,
@@ -900,9 +903,9 @@ async def designate_privacy_officer(
             PrivacyOfficer.organization_id == current_user.organization_id
         ).first()
         return templates.TemplateResponse(
+            request,
             "privacy_officer.html",
             {
-                "request": request,
                 "user": current_user,
                 "officer": officer,
                 "org_users": org_users,
@@ -974,9 +977,9 @@ async def pias_list(request: Request, db: Session = Depends(get_db)):
     ).order_by(PIA.created_at.desc()).all()
 
     return templates.TemplateResponse(
+        request,
         "pias_list.html",
         {
-            "request": request,
             "user": user,
             "pias": pias
         }
@@ -1000,9 +1003,9 @@ async def pias_new(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
 
     return templates.TemplateResponse(
+        request,
         "pias_new.html",
         {
-            "request": request,
             "user": user
         }
     )
@@ -1038,9 +1041,9 @@ async def pias_detail(request: Request, pia_id: int, db: Session = Depends(get_d
         )
 
     return templates.TemplateResponse(
+        request,
         "pias_detail.html",
         {
-            "request": request,
             "user": user,
             "pia": pia
         }
@@ -1288,9 +1291,9 @@ async def data_register_page(request: Request, db: Session = Depends(get_db)):
     ).order_by(DataRegister.data_category).all()
 
     return templates.TemplateResponse(
+        request,
         "data_register.html",
         {
-            "request": request,
             "user": user,
             "data_entries": data_entries
         }
@@ -1496,9 +1499,9 @@ async def requests_list(request: Request, db: Session = Depends(get_db)):
     ).all()
 
     return templates.TemplateResponse(
+        request,
         "requests.html",
         {
-            "request": request,
             "user": user,
             "requests": requests,
             "org_users": org_users
@@ -1673,9 +1676,9 @@ async def incidents_list(request: Request, db: Session = Depends(get_db)):
     ).order_by(BreachIncident.created_at.desc()).all()
 
     return templates.TemplateResponse(
+        request,
         "incidents.html",
         {
-            "request": request,
             "user": user,
             "incidents": incidents
         }
@@ -1712,9 +1715,9 @@ async def incidents_detail(request: Request, incident_id: int, db: Session = Dep
         )
 
     return templates.TemplateResponse(
+        request,
         "incidents_detail.html",
         {
-            "request": request,
             "user": user,
             "incident": incident
         }
@@ -2014,9 +2017,9 @@ async def settings_page(request: Request, db: Session = Depends(get_db), success
         )
 
     return templates.TemplateResponse(
+        request,
         "settings.html",
         {
-            "request": request,
             "user": user,
             "organization": organization,
             "success_message": "Settings updated successfully!" if success else None
@@ -2122,9 +2125,9 @@ async def team_management_page(request: Request, db: Session = Depends(get_db)):
     ).first()
 
     return templates.TemplateResponse(
+        request,
         "team.html",
         {
-            "request": request,
             "user": user,
             "team_members": team_members,
             "organization": organization
@@ -2214,9 +2217,9 @@ async def audit_log_page(
     entity_types = [et[0] for et in entity_types if et[0]]
 
     return templates.TemplateResponse(
+        request,
         "audit_log.html",
         {
-            "request": request,
             "user": user,
             "audit_logs": audit_logs,
             "entity_types": entity_types,

@@ -191,9 +191,9 @@ async def get_ipp_checklist(
     ]
 
     return templates.TemplateResponse(
+        request,
         "ipp_checklist.html",
         {
-            "request": request,
             "assessments": assessments,
             "score": score,
             "status_options": status_options,

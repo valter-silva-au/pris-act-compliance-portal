@@ -1,6 +1,7 @@
 """FastAPI application for WA PRIS Act Compliance Portal."""
 
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from src.app.auth import router as auth_router
 from src.app.ipp import router as ipp_router
@@ -8,17 +9,15 @@ from src.app.routes.web import router as web_router
 from src.app.reports import router as reports_router
 from src.app.database import init_db, get_db
 
-# Create FastAPI application instance
-app = FastAPI(
-    title="WA PRIS Act Compliance Portal",
-    description="A compliance management system for WA Privacy and Responsible Information Sharing Act",
-    version="0.1.0"
-)
 
-# Initialize database tables on startup
-@app.on_event("startup")
-def startup_event():
-    """Initialize database tables on application startup."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for application startup and shutdown.
+
+    Handles database initialization and optional demo data seeding.
+    """
+    # Startup
     init_db()
 
     # Seed demo data if SEED_DEMO environment variable is set to 1
@@ -30,6 +29,19 @@ def startup_event():
             seed_demo_data(db)
         finally:
             db.close()
+
+    yield
+
+    # Shutdown (cleanup if needed)
+
+
+# Create FastAPI application instance
+app = FastAPI(
+    title="WA PRIS Act Compliance Portal",
+    description="A compliance management system for WA Privacy and Responsible Information Sharing Act",
+    version="0.1.0",
+    lifespan=lifespan
+)
 
 # Include routers
 app.include_router(web_router)
