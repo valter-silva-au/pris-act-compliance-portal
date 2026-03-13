@@ -1,0 +1,70 @@
+<h2 class="text-2xl font-bold text-gray-800 mb-4">Step 1: Organization Details</h2>
+<p class="text-gray-600 mb-6">Please provide some basic information about your organization.</p>
+
+<form hx-post="/onboarding/step-1"
+      hx-target="#wizard-content"
+      hx-swap="innerHTML"
+      class="space-y-4">
+
+    <div>
+        <label for="abn" class="block text-sm font-medium text-gray-700 mb-1">
+            Australian Business Number (ABN) <span class="text-red-500">*</span>
+        </label>
+        <input type="text"
+               id="abn"
+               name="abn"
+               value="{{ org.abn if org else '' }}"
+               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+               required
+               pattern="[0-9]{11}"
+               maxlength="11"
+               placeholder="12345678901">
+        <p class="text-xs text-gray-500 mt-1">11-digit ABN</p>
+    </div>
+
+    <div>
+        <label for="industry" class="block text-sm font-medium text-gray-700 mb-1">
+            Industry Sector <span class="text-red-500">*</span>
+        </label>
+        <select id="industry"
+                name="industry"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required>
+            <option value="">Select an industry...</option>
+            <option value="Technology" {% if org and org.industry == 'Technology' %}selected{% endif %}>Technology</option>
+            <option value="Healthcare" {% if org and org.industry == 'Healthcare' %}selected{% endif %}>Healthcare</option>
+            <option value="Finance" {% if org and org.industry == 'Finance' %}selected{% endif %}>Finance</option>
+            <option value="Education" {% if org and org.industry == 'Education' %}selected{% endif %}>Education</option>
+            <option value="Retail" {% if org and org.industry == 'Retail' %}selected{% endif %}>Retail</option>
+            <option value="Manufacturing" {% if org and org.industry == 'Manufacturing' %}selected{% endif %}>Manufacturing</option>
+            <option value="Government" {% if org and org.industry == 'Government' %}selected{% endif %}>Government</option>
+            <option value="Non-Profit" {% if org and org.industry == 'Non-Profit' %}selected{% endif %}>Non-Profit</option>
+            <option value="Other" {% if org and org.industry == 'Other' %}selected{% endif %}>Other</option>
+        </select>
+    </div>
+
+    <div>
+        <label for="number_of_employees" class="block text-sm font-medium text-gray-700 mb-1">
+            Number of Employees <span class="text-red-500">*</span>
+        </label>
+        <select id="number_of_employees"
+                name="number_of_employees"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required>
+            <option value="">Select range...</option>
+            <option value="5" {% if org and org.number_of_employees == 5 %}selected{% endif %}>1-10</option>
+            <option value="25" {% if org and org.number_of_employees == 25 %}selected{% endif %}>11-50</option>
+            <option value="75" {% if org and org.number_of_employees == 75 %}selected{% endif %}>51-100</option>
+            <option value="250" {% if org and org.number_of_employees == 250 %}selected{% endif %}>101-500</option>
+            <option value="1000" {% if org and org.number_of_employees == 1000 %}selected{% endif %}>501-2000</option>
+            <option value="5000" {% if org and org.number_of_employees == 5000 %}selected{% endif %}>2000+</option>
+        </select>
+    </div>
+
+    <div class="flex justify-end pt-4">
+        <button type="submit"
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+            Next →
+        </button>
+    </div>
+</form>

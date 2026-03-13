@@ -48,7 +48,11 @@ def client(db_session):
 @pytest.fixture
 def test_user(db_session):
     """Create a test user for authenticated requests."""
-    org = Organization(name="Test Org", abn="12345678901")
+    org = Organization(
+        name="Test Org",
+        abn="12345678901",
+        onboarding_completed=1  # Mark as completed for tests
+    )
     db_session.add(org)
     db_session.flush()
 

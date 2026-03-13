@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Onboarding - WA PRIS Act Compliance Portal{% endblock %}
+
+{% block page_title %}Welcome to PRIS Act Compliance Portal{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Onboarding Header -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Welcome, {{ org.name }}!</h1>
+        <p class="text-gray-600">Let's get your organization set up for PRIS Act compliance. This quick wizard will help you:</p>
+        <ul class="list-disc list-inside text-gray-600 mt-2 space-y-1">
+            <li>Complete your organization details</li>
+            <li>Designate a Privacy Officer</li>
+            <li>Complete an initial IPP self-assessment</li>
+            <li>Get recommendations for next steps</li>
+        </ul>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center {% if progress.current_step >= 1 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                <div class="w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold {% if progress.step1_completed %}bg-green-500 text-white border-green-500{% elif progress.current_step == 1 %}bg-blue-600 text-white border-blue-600{% else %}bg-white border-gray-300{% endif %}">
+                    {% if progress.step1_completed %}✓{% else %}1{% endif %}
+                </div>
+                <span class="ml-2 font-medium hidden md:inline">Organization</span>
+            </div>
+            <div class="flex-1 h-1 mx-2 {% if progress.current_step >= 2 %}bg-blue-600{% else %}bg-gray-300{% endif %}"></div>
+            <div class="flex items-center {% if progress.current_step >= 2 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                <div class="w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold {% if progress.step2_completed %}bg-green-500 text-white border-green-500{% elif progress.current_step == 2 %}bg-blue-600 text-white border-blue-600{% else %}bg-white border-gray-300{% endif %}">
+                    {% if progress.step2_completed %}✓{% else %}2{% endif %}
+                </div>
+                <span class="ml-2 font-medium hidden md:inline">Privacy Officer</span>
+            </div>
+            <div class="flex-1 h-1 mx-2 {% if progress.current_step >= 3 %}bg-blue-600{% else %}bg-gray-300{% endif %}"></div>
+            <div class="flex items-center {% if progress.current_step >= 3 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                <div class="w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold {% if progress.step3_completed %}bg-green-500 text-white border-green-500{% elif progress.current_step == 3 %}bg-blue-600 text-white border-blue-600{% else %}bg-white border-gray-300{% endif %}">
+                    {% if progress.step3_completed %}✓{% else %}3{% endif %}
+                </div>
+                <span class="ml-2 font-medium hidden md:inline">IPP Assessment</span>
+            </div>
+            <div class="flex-1 h-1 mx-2 {% if progress.current_step >= 4 %}bg-blue-600{% else %}bg-gray-300{% endif %}"></div>
+            <div class="flex items-center {% if progress.current_step >= 4 %}text-blue-600{% else %}text-gray-400{% endif %}">
+                <div class="w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold {% if progress.step4_completed %}bg-green-500 text-white border-green-500{% elif progress.current_step == 4 %}bg-blue-600 text-white border-blue-600{% else %}bg-white border-gray-300{% endif %}">
+                    {% if progress.step4_completed %}✓{% else %}4{% endif %}
+                </div>
+                <span class="ml-2 font-medium hidden md:inline">Complete</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wizard Content Container -->
+    <div id="wizard-content" class="bg-white rounded-lg shadow-md p-6">
+        {% if progress.current_step == 1 %}
+            {% include "onboarding_step1.html" %}
+        {% elif progress.current_step == 2 %}
+            {% include "onboarding_step2.html" %}
+        {% elif progress.current_step == 3 %}
+            {% include "onboarding_step3.html" %}
+        {% elif progress.current_step == 4 %}
+            {% include "onboarding_step4.html" %}
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

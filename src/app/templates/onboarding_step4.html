@@ -1,0 +1,116 @@
+<h2 class="text-2xl font-bold text-gray-800 mb-4">Step 4: Onboarding Complete!</h2>
+<p class="text-gray-600 mb-6">Congratulations! You've completed the initial setup. Here's a summary and your next steps.</p>
+
+<!-- Compliance Summary -->
+<div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg p-6 mb-6">
+    <h3 class="text-xl font-bold mb-2">Your Compliance Score</h3>
+    <div class="text-4xl font-bold mb-2">{{ compliant_count }}/{{ total_ipps }}</div>
+    <p class="text-blue-100">IPPs marked as compliant</p>
+</div>
+
+<!-- Next Steps Recommendations -->
+<div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-4">Recommended Next Steps</h3>
+    <div class="space-y-4">
+        {% if compliant_count < total_ipps %}
+        <div class="flex items-start">
+            <div class="flex-shrink-0 w-8 h-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-bold mr-3">
+                1
+            </div>
+            <div>
+                <h4 class="font-semibold text-gray-800">Review IPP Compliance</h4>
+                <p class="text-sm text-gray-600">Visit the IPP Checklist to review areas marked as non-compliant and develop action plans.</p>
+                <a href="/ipp-checklist" class="text-sm text-blue-600 hover:underline">Go to IPP Checklist →</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="flex items-start">
+            <div class="flex-shrink-0 w-8 h-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-bold mr-3">
+                {% if compliant_count < total_ipps %}2{% else %}1{% endif %}
+            </div>
+            <div>
+                <h4 class="font-semibold text-gray-800">Create Your First Privacy Impact Assessment</h4>
+                <p class="text-sm text-gray-600">Document how your organization collects, uses, and protects personal information.</p>
+                <a href="/pias/new" class="text-sm text-blue-600 hover:underline">Create PIA →</a>
+            </div>
+        </div>
+
+        <div class="flex items-start">
+            <div class="flex-shrink-0 w-8 h-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-bold mr-3">
+                {% if compliant_count < total_ipps %}3{% else %}2{% endif %}
+            </div>
+            <div>
+                <h4 class="font-semibold text-gray-800">Set Up Your Data Register</h4>
+                <p class="text-sm text-gray-600">Maintain a register of personal information your organization holds.</p>
+                <a href="/data-register" class="text-sm text-blue-600 hover:underline">Go to Data Register →</a>
+            </div>
+        </div>
+
+        <div class="flex items-start">
+            <div class="flex-shrink-0 w-8 h-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-bold mr-3">
+                {% if compliant_count < total_ipps %}4{% else %}3{% endif %}
+            </div>
+            <div>
+                <h4 class="font-semibold text-gray-800">Review Privacy Officer Details</h4>
+                <p class="text-sm text-gray-600">Ensure your Privacy Officer information is complete and up-to-date.</p>
+                <a href="/privacy-officer" class="text-sm text-blue-600 hover:underline">View Privacy Officer →</a>
+            </div>
+        </div>
+
+        {% if user.role == 'admin' %}
+        <div class="flex items-start">
+            <div class="flex-shrink-0 w-8 h-8 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center font-bold mr-3">
+                {% if compliant_count < total_ipps %}5{% else %}4{% endif %}
+            </div>
+            <div>
+                <h4 class="font-semibold text-gray-800">Invite Team Members</h4>
+                <p class="text-sm text-gray-600">Add more users to help manage compliance activities.</p>
+                <a href="/settings" class="text-sm text-blue-600 hover:underline">Manage Team →</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Resources -->
+<div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
+    <h3 class="text-lg font-bold text-gray-800 mb-3">Helpful Resources</h3>
+    <ul class="space-y-2 text-sm text-gray-600">
+        <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <a href="#" class="hover:underline text-blue-600">WA PRIS Act Legislation</a>
+        </li>
+        <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+            </svg>
+            <a href="#" class="hover:underline text-blue-600">Best Practice Guidelines</a>
+        </li>
+        <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <a href="#" class="hover:underline text-blue-600">FAQ & Support</a>
+        </li>
+    </ul>
+</div>
+
+<!-- Complete Button -->
+<form hx-post="/onboarding/complete"
+      hx-swap="none"
+      class="flex justify-between pt-4">
+    <button type="button"
+            hx-get="/onboarding/back/3"
+            hx-target="#wizard-content"
+            hx-swap="innerHTML"
+            class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition">
+        ← Back
+    </button>
+    <button type="submit"
+            class="px-8 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition text-lg font-semibold">
+        Complete Onboarding →
+    </button>
+</form>

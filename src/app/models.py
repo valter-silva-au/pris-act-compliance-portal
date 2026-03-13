@@ -78,6 +78,8 @@ class Organization(Base):
     name = Column(String(255), nullable=False)
     abn = Column(String(50), unique=True, nullable=False)
     industry = Column(String(255))
+    number_of_employees = Column(Integer)
+    onboarding_completed = Column(Integer, default=0)  # SQLite uses INTEGER for BOOLEAN
     created_at = Column(DateTime, default=utc_now)
 
     # Relationships
@@ -88,6 +90,7 @@ class Organization(Base):
     access_requests = relationship("AccessRequest", back_populates="organization")
     breach_incidents = relationship("BreachIncident", back_populates="organization")
     ipp_assessments = relationship("IPPAssessment", back_populates="organization")
+    onboarding_progress = relationship("OnboardingProgress", back_populates="organization", uselist=False)
 
 
 class User(Base):
@@ -106,6 +109,23 @@ class User(Base):
     privacy_officer_profile = relationship("PrivacyOfficer", back_populates="user", uselist=False)
     created_pias = relationship("PIA", back_populates="creator", foreign_keys="PIA.created_by")
     audit_logs = relationship("AuditLog", back_populates="user")
+
+
+class OnboardingProgress(Base):
+    """Onboarding Progress model to track wizard completion."""
+    __tablename__ = "onboarding_progress"
+
+    id = Column(Integer, primary_key=True, index=True)
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=False, unique=True)
+    current_step = Column(Integer, default=1)  # 1-4
+    step1_completed = Column(Integer, default=0)
+    step2_completed = Column(Integer, default=0)
+    step3_completed = Column(Integer, default=0)
+    step4_completed = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    # Relationships
+    organization = relationship("Organization", back_populates="onboarding_progress")
 
 
 class PrivacyOfficer(Base):

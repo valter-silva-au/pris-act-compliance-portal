@@ -18,7 +18,7 @@ from src.app.database import get_db
 from src.app.models import (
     Organization, User, PrivacyOfficer, PIA, PIAStatus, RiskLevel, DataRegister,
     AccessRequest, RequestType, AccessRequestStatus, BreachIncident, BreachIncidentStatus,
-    IPPAssessment, ComplianceStatus, AuditLog
+    IPPAssessment, ComplianceStatus, AuditLog, OnboardingProgress
 )
 from datetime import date, timedelta
 import json
@@ -71,6 +71,10 @@ async def root(request: Request, db: Session = Depends(get_db)):
     """
     user = get_current_user_from_cookie(request, db)
     if user:
+        # Check if organization has completed onboarding
+        org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+        if org and not org.onboarding_completed:
+            return RedirectResponse(url="/onboarding", status_code=status.HTTP_302_FOUND)
         return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
     return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
 
@@ -119,8 +123,14 @@ async def login_submit(
     # Create access token
     access_token = create_access_token(data={"sub": user.email})
 
+    # Check if organization has completed onboarding
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    redirect_url = "/dashboard"
+    if org and not org.onboarding_completed:
+        redirect_url = "/onboarding"
+
     # Create response with redirect
-    response = RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+    response = RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -223,6 +233,419 @@ async def logout():
     response = RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
     response.delete_cookie(key="access_token")
     return response
+
+
+@router.get("/onboarding", response_class=HTMLResponse)
+async def onboarding(request: Request, db: Session = Depends(get_db)):
+    """
+    Display the onboarding wizard for new organizations.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+
+    Returns:
+        HTMLResponse: Rendered onboarding wizard page or redirect to dashboard if completed
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Get organization
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+
+    # If onboarding already completed, redirect to dashboard
+    if org and org.onboarding_completed:
+        return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+
+    # Get or create onboarding progress
+    progress = db.query(OnboardingProgress).filter(
+        OnboardingProgress.organization_id == user.organization_id
+    ).first()
+
+    if not progress:
+        progress = OnboardingProgress(
+            organization_id=user.organization_id,
+            current_step=1
+        )
+        db.add(progress)
+        db.commit()
+        db.refresh(progress)
+
+    # Get all users for privacy officer selection
+    team_members = db.query(User).filter(
+        User.organization_id == user.organization_id
+    ).all()
+
+    # Get IPP definitions for step 3
+    from src.app.ipp import IPP_DEFINITIONS
+
+    # Get existing IPP assessments if any
+    ipp_assessments = db.query(IPPAssessment).filter(
+        IPPAssessment.organization_id == user.organization_id
+    ).order_by(IPPAssessment.ipp_number).all()
+
+    # Create a dict of existing assessments
+    existing_assessments = {a.ipp_number: a for a in ipp_assessments}
+
+    # Calculate compliance count for step 4
+    compliant_count = sum(
+        1 for a in ipp_assessments
+        if a.compliance_status == ComplianceStatus.COMPLIANT
+    )
+
+    return templates.TemplateResponse(
+        "onboarding.html",
+        {
+            "request": request,
+            "user": user,
+            "org": org,
+            "progress": progress,
+            "team_members": team_members,
+            "ipp_definitions": IPP_DEFINITIONS,
+            "existing_assessments": existing_assessments,
+            "compliant_count": compliant_count,
+            "total_ipps": 11
+        }
+    )
+
+
+@router.post("/onboarding/step-1", response_class=HTMLResponse)
+async def onboarding_step1(
+    request: Request,
+    abn: str = Form(...),
+    industry: str = Form(...),
+    number_of_employees: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Handle step 1: Organization details.
+
+    Args:
+        request: FastAPI request object
+        abn: Organization ABN
+        industry: Industry sector
+        number_of_employees: Number of employees
+        db: Database session
+
+    Returns:
+        HTMLResponse: Step 2 HTML fragment for HTMX
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return HTMLResponse(status_code=status.HTTP_401_UNAUTHORIZED, content="Unauthorized")
+
+    # Update organization details
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    if org:
+        org.abn = abn
+        org.industry = industry
+        org.number_of_employees = number_of_employees
+
+    # Update progress
+    progress = db.query(OnboardingProgress).filter(
+        OnboardingProgress.organization_id == user.organization_id
+    ).first()
+    if progress:
+        progress.step1_completed = 1
+        progress.current_step = 2
+
+    db.commit()
+
+    # Get team members for step 2
+    team_members = db.query(User).filter(
+        User.organization_id == user.organization_id
+    ).all()
+
+    return templates.TemplateResponse(
+        "onboarding_step2.html",
+        {
+            "request": request,
+            "user": user,
+            "progress": progress,
+            "team_members": team_members
+        }
+    )
+
+
+@router.post("/onboarding/step-2", response_class=HTMLResponse)
+async def onboarding_step2(
+    request: Request,
+    privacy_officer_type: str = Form(...),
+    existing_user_id: int = Form(None),
+    new_po_name: str = Form(None),
+    new_po_email: str = Form(None),
+    contact_phone: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Handle step 2: Designate Privacy Officer.
+
+    Args:
+        request: FastAPI request object
+        privacy_officer_type: 'existing' or 'new'
+        existing_user_id: User ID if selecting existing team member
+        new_po_name: Name if creating new privacy officer
+        new_po_email: Email if creating new privacy officer
+        contact_phone: Contact phone for privacy officer
+        db: Database session
+
+    Returns:
+        HTMLResponse: Step 3 HTML fragment for HTMX
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return HTMLResponse(status_code=status.HTTP_401_UNAUTHORIZED, content="Unauthorized")
+
+    # Handle privacy officer creation/designation
+    privacy_officer_user_id = None
+
+    if privacy_officer_type == "existing" and existing_user_id:
+        privacy_officer_user_id = existing_user_id
+    elif privacy_officer_type == "new" and new_po_name and new_po_email:
+        # Create new user as privacy officer
+        import secrets
+        temp_password = secrets.token_urlsafe(16)
+        hashed_password = get_password_hash(temp_password)
+
+        new_user = User(
+            email=new_po_email,
+            hashed_password=hashed_password,
+            full_name=new_po_name,
+            role="privacy_officer",
+            organization_id=user.organization_id
+        )
+        db.add(new_user)
+        db.flush()
+        privacy_officer_user_id = new_user.id
+
+    # Create or update PrivacyOfficer record
+    if privacy_officer_user_id:
+        # Check if privacy officer already exists
+        existing_po = db.query(PrivacyOfficer).filter(
+            PrivacyOfficer.organization_id == user.organization_id
+        ).first()
+
+        if existing_po:
+            existing_po.user_id = privacy_officer_user_id
+            existing_po.contact_phone = contact_phone
+            existing_po.designation_date = date.today()
+        else:
+            po = PrivacyOfficer(
+                user_id=privacy_officer_user_id,
+                organization_id=user.organization_id,
+                designation_date=date.today(),
+                contact_phone=contact_phone
+            )
+            db.add(po)
+
+    # Update progress
+    progress = db.query(OnboardingProgress).filter(
+        OnboardingProgress.organization_id == user.organization_id
+    ).first()
+    if progress:
+        progress.step2_completed = 1
+        progress.current_step = 3
+
+    db.commit()
+
+    # Get IPP definitions for step 3
+    from src.app.ipp import IPP_DEFINITIONS
+
+    return templates.TemplateResponse(
+        "onboarding_step3.html",
+        {
+            "request": request,
+            "user": user,
+            "progress": progress,
+            "ipp_definitions": IPP_DEFINITIONS
+        }
+    )
+
+
+@router.post("/onboarding/step-3", response_class=HTMLResponse)
+async def onboarding_step3(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Handle step 3: Initial IPP self-assessment.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+
+    Returns:
+        HTMLResponse: Step 4 HTML fragment for HTMX
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return HTMLResponse(status_code=status.HTTP_401_UNAUTHORIZED, content="Unauthorized")
+
+    # Parse form data for IPP assessments
+    form_data = await request.form()
+
+    # Initialize IPP assessments from the 11 IPPs
+    from src.app.ipp import IPP_DEFINITIONS
+
+    for ipp_def in IPP_DEFINITIONS:
+        ipp_number = ipp_def["number"]
+        ipp_compliant = form_data.get(f"ipp_{ipp_number}")
+
+        # Check if assessment already exists
+        existing = db.query(IPPAssessment).filter(
+            IPPAssessment.organization_id == user.organization_id,
+            IPPAssessment.ipp_number == ipp_number
+        ).first()
+
+        # Determine compliance status based on yes/no
+        compliance_status = ComplianceStatus.COMPLIANT if ipp_compliant == "yes" else ComplianceStatus.NOT_ASSESSED
+
+        if existing:
+            existing.compliance_status = compliance_status
+        else:
+            assessment = IPPAssessment(
+                ipp_number=ipp_number,
+                ipp_name=ipp_def["name"],
+                compliance_status=compliance_status,
+                evidence_notes="",
+                organization_id=user.organization_id
+            )
+            db.add(assessment)
+
+    # Update progress
+    progress = db.query(OnboardingProgress).filter(
+        OnboardingProgress.organization_id == user.organization_id
+    ).first()
+    if progress:
+        progress.step3_completed = 1
+        progress.current_step = 4
+
+    db.commit()
+
+    # Calculate compliance score for summary
+    ipp_assessments = db.query(IPPAssessment).filter(
+        IPPAssessment.organization_id == user.organization_id
+    ).all()
+
+    compliant_count = sum(
+        1 for a in ipp_assessments
+        if a.compliance_status == ComplianceStatus.COMPLIANT
+    )
+
+    return templates.TemplateResponse(
+        "onboarding_step4.html",
+        {
+            "request": request,
+            "user": user,
+            "progress": progress,
+            "compliant_count": compliant_count,
+            "total_ipps": 11
+        }
+    )
+
+
+@router.post("/onboarding/complete", response_class=RedirectResponse)
+async def onboarding_complete(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Complete the onboarding wizard.
+
+    Args:
+        request: FastAPI request object
+        db: Database session
+
+    Returns:
+        RedirectResponse: Redirect to dashboard
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Mark onboarding as completed
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    if org:
+        org.onboarding_completed = 1
+
+    # Update progress
+    progress = db.query(OnboardingProgress).filter(
+        OnboardingProgress.organization_id == user.organization_id
+    ).first()
+    if progress:
+        progress.step4_completed = 1
+
+    db.commit()
+
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/onboarding/back/{step}", response_class=HTMLResponse)
+async def onboarding_back(
+    request: Request,
+    step: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Navigate back to a previous step in the onboarding wizard.
+
+    Args:
+        request: FastAPI request object
+        step: Step number to go back to (1-3)
+        db: Database session
+
+    Returns:
+        HTMLResponse: Previous step HTML fragment for HTMX
+    """
+    user = get_current_user_from_cookie(request, db)
+    if not user:
+        return HTMLResponse(status_code=status.HTTP_401_UNAUTHORIZED, content="Unauthorized")
+
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+
+    progress = db.query(OnboardingProgress).filter(
+        OnboardingProgress.organization_id == user.organization_id
+    ).first()
+
+    if progress:
+        progress.current_step = step
+        db.commit()
+
+    if step == 1:
+        return templates.TemplateResponse(
+            "onboarding_step1.html",
+            {
+                "request": request,
+                "user": user,
+                "org": org,
+                "progress": progress
+            }
+        )
+    elif step == 2:
+        team_members = db.query(User).filter(
+            User.organization_id == user.organization_id
+        ).all()
+        return templates.TemplateResponse(
+            "onboarding_step2.html",
+            {
+                "request": request,
+                "user": user,
+                "progress": progress,
+                "team_members": team_members
+            }
+        )
+    elif step == 3:
+        from src.app.ipp import IPP_DEFINITIONS
+        return templates.TemplateResponse(
+            "onboarding_step3.html",
+            {
+                "request": request,
+                "user": user,
+                "progress": progress,
+                "ipp_definitions": IPP_DEFINITIONS
+            }
+        )
 
 
 @router.get("/dashboard", response_class=HTMLResponse)

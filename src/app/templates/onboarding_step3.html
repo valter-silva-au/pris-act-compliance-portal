@@ -1,0 +1,61 @@
+<h2 class="text-2xl font-bold text-gray-800 mb-4">Step 3: Initial IPP Self-Assessment</h2>
+<p class="text-gray-600 mb-6">Please provide a quick initial assessment of your organization's compliance with each of the 11 Information Privacy Principles.</p>
+
+<form hx-post="/onboarding/step-3"
+      hx-target="#wizard-content"
+      hx-swap="innerHTML"
+      class="space-y-4">
+
+    <div class="space-y-6">
+        {% for ipp in ipp_definitions %}
+        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition">
+            <div class="flex items-start">
+                <div class="flex-shrink-0 w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold mr-4">
+                    {{ ipp.number }}
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-semibold text-gray-800 mb-1">{{ ipp.name }}</h3>
+                    <p class="text-sm text-gray-600 mb-3">{{ ipp.description }}</p>
+                    <div class="flex items-center space-x-4">
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio"
+                                   name="ipp_{{ ipp.number }}"
+                                   value="yes"
+                                   class="mr-2"
+                                   required>
+                            <span class="text-sm font-medium text-green-600">Yes, compliant</span>
+                        </label>
+                        <label class="flex items-center cursor-pointer">
+                            <input type="radio"
+                                   name="ipp_{{ ipp.number }}"
+                                   value="no"
+                                   class="mr-2">
+                            <span class="text-sm font-medium text-gray-600">No / Unsure</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-6">
+        <p class="text-sm text-blue-800">
+            <strong>Note:</strong> This is a preliminary assessment. You can update your compliance status and add detailed evidence notes later in the IPP Checklist section.
+        </p>
+    </div>
+
+    <div class="flex justify-between pt-4">
+        <button type="button"
+                hx-get="/onboarding/back/2"
+                hx-target="#wizard-content"
+                hx-swap="innerHTML"
+                class="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition">
+            ← Back
+        </button>
+        <button type="submit"
+                class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition">
+            Next →
+        </button>
+    </div>
+</form>

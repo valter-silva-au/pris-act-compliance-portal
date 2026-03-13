@@ -50,7 +50,12 @@ def client(db_session):
 @pytest.fixture
 def test_org(db_session):
     """Create a test organization."""
-    org = Organization(name="Test Org", abn="12345678901", industry="Technology")
+    org = Organization(
+        name="Test Org",
+        abn="12345678901",
+        industry="Technology",
+        onboarding_completed=1  # Mark as completed for tests
+    )
     db_session.add(org)
     db_session.commit()
     db_session.refresh(org)

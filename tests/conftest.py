@@ -75,7 +75,8 @@ def test_org(db):
     org = Organization(
         name="Test Organization",
         abn="12345678901",
-        industry="Technology"
+        industry="Technology",
+        onboarding_completed=1  # Mark as completed for existing tests
     )
     db.add(org)
     db.commit()
