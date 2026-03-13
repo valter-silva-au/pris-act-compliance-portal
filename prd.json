@@ -193,7 +193,7 @@
         "Response Content-Type is application/pdf",
         "Tests verify PDF endpoints return 200 with correct content type"
       ],
-      "status": "pending",
+      "status": "blocked",
       "dependencies": [
         "TASK-011"
       ]
