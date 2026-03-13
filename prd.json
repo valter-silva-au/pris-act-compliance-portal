@@ -226,7 +226,7 @@
         "GET /settings/team lists all organization users",
         "Tests verify role-based access restrictions"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-013"
       ]
