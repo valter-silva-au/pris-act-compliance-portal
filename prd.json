@@ -275,7 +275,7 @@
         "Audit entries include user, action, entity, and timestamp",
         "Tests verify audit entries are created on CRUD operations"
       ],
-      "status": "pending",
+      "status": "blocked",
       "dependencies": [
         "TASK-011"
       ]
@@ -292,7 +292,7 @@
         "FAQ section answers 4 common questions",
         "CTA links to /register"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-004"
       ]
