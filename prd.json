@@ -259,7 +259,7 @@
         "Notifications created for overdue requests and stale PIAs",
         "Tests verify notification creation and read status"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": [
         "TASK-011"
       ]
