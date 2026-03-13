@@ -1254,19 +1254,7 @@ async def update_pia_status(
     pia.status = PIAStatus(status_value)
     db.commit()
 
-    # Return the updated status HTML fragment
-    status_badges = {
-        "draft": "bg-gray-100 text-gray-800",
-        "in_review": "bg-blue-100 text-blue-800",
-        "approved": "bg-green-100 text-green-800",
-        "rejected": "bg-red-100 text-red-800"
-    }
-    badge_class = status_badges.get(pia.status.value, "bg-gray-100 text-gray-800")
-
-    return {
-        "status": pia.status.value,
-        "badge_html": f'<span class="px-2 py-1 text-xs font-semibold rounded-full {badge_class}">{pia.status.value.replace("_", " ").title()}</span>'
-    }
+    return RedirectResponse(url=f"/pias/{pia_id}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/data-register", response_class=HTMLResponse)
