@@ -338,7 +338,7 @@
         "All tests that create users pass (test_dashboard, test_pias, test_requests, test_incidents, test_rbac, etc.)",
         "python3 -m pytest tests/ runs with 0 errors"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": []
     },
     {
