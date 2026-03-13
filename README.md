@@ -137,6 +137,10 @@ This entire application was built by [Agent Loops](https://github.com/valter-sil
 
 - [Research](docs/RESEARCH.md) — Gemini Deep Research: market analysis, regulatory landscape, business model
 
+## Why This Matters
+
+Read **[The Story of Why This Matters](docs/STORY.md)** — a plain-English guide explaining the PRIS Act, why it affects thousands of WA businesses, and how it protects every Australian's personal information. Written for a 40-year-old who doesn't know anything about privacy law.
+
 ## Pricing (Planned)
 
 - **Starter:** $99/month (up to 5 users)
