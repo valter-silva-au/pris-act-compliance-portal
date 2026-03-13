@@ -301,7 +301,11 @@ class TestCrossTenantDataRegisterIsolation:
             f"/api/data-register/{data_register_org2.id}",
             data={
                 "data_category": "Hacked Category",
-                "description": "Unauthorized modification"
+                "description": "Unauthorized modification",
+                "storage_location": "Hacker's server",
+                "access_controls": "Public access",
+                "retention_period": "Forever",
+                "legal_basis": "None"
             }
         )
         # Should get 404
