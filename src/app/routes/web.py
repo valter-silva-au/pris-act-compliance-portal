@@ -14,6 +14,12 @@ from src.app.auth import (
     create_access_token,
     get_user_by_email,
 )
+from src.app.validators import (
+    validate_email, validate_password, validate_full_name,
+    validate_phone_au, validate_abn, validate_org_name,
+    validate_required_string, validate_enum, validate_positive_integer,
+    validate_pia_status_transition, strip_and_clean,
+)
 from src.app.database import get_db
 from src.app.models import (
     Organization, User, PrivacyOfficer, PIA, PIAStatus, RiskLevel, DataRegister,
@@ -213,13 +219,24 @@ async def register_submit(
     Returns:
         RedirectResponse: Redirect to login on success, or back to register with error
     """
-    # Validate passwords match
+    # Validate all fields
+    errors = {}
+    ok, err = validate_email(email)
+    if not ok: errors["email"] = err
+    ok, err = validate_password(password)
+    if not ok: errors["password"] = err
+    ok, err = validate_full_name(full_name)
+    if not ok: errors["full_name"] = err
+    ok, err = validate_org_name(org_name)
+    if not ok: errors["org_name"] = err
     if password != confirm_password:
+        errors["confirm_password"] = "Passwords do not match"
+
+    if errors:
         return templates.TemplateResponse(
-            request,
-            "register.html",
-            {"error": "Passwords do not match"},
-            status_code=status.HTTP_400_BAD_REQUEST
+            request, "register.html",
+            {"error": "; ".join(errors.values())},
+            status_code=422
         )
 
     # Check if user already exists
@@ -872,6 +889,18 @@ async def designate_privacy_officer(
             detail="Only administrators can designate privacy officers"
         )
 
+    # Validate phone number
+    if contact_phone:
+        ok, err = validate_phone_au(contact_phone)
+        if not ok:
+            org_users = db.query(User).filter(User.organization_id == current_user.organization_id).all()
+            officer = db.query(PrivacyOfficer).filter(PrivacyOfficer.organization_id == current_user.organization_id).first()
+            return templates.TemplateResponse(
+                request, "privacy_officer.html",
+                {"user": current_user, "officer": officer, "org_users": org_users, "error": err},
+                status_code=422
+            )
+
     # Verify the selected user exists and belongs to the same organization
     selected_user = db.query(User).filter(User.id == user_id).first()
     if not selected_user:
@@ -1250,6 +1279,11 @@ async def update_pia_status(
             detail="PIA not found"
         )
 
+    # Validate status transition
+    ok, err = validate_pia_status_transition(pia.status.value, status_value)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
     # Update status
     pia.status = PIAStatus(status_value)
     db.commit()
@@ -1525,6 +1559,18 @@ async def create_request(
     user = get_current_user_from_cookie(request, db)
     if not user:
         return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
+
+    # Validate fields
+    errors = []
+    ok, err = validate_required_string(requester_name, "Requester name", 2, 200)
+    if not ok: errors.append(err)
+    ok, err = validate_email(requester_email)
+    if not ok: errors.append(err)
+    ok, err = validate_enum(request_type, "Request type", ["access", "correction"])
+    if not ok: errors.append(err)
+
+    if errors:
+        raise HTTPException(status_code=422, detail="; ".join(errors))
 
     # Calculate due date: 45 days from today (PRIS Act requirement)
     due_date = date.today() + timedelta(days=45)

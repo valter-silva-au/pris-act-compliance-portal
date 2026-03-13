@@ -328,7 +328,7 @@ def test_designate_privacy_officer_generates_audit_log(client, db, test_user, te
         "/api/privacy-officer",
         data={
             "user_id": test_user.id,
-            "contact_phone": "1234567890"
+            "contact_phone": "0412345678"
         },
         follow_redirects=False
     )

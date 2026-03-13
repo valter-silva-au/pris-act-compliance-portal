@@ -153,8 +153,11 @@
                         id="contact_phone"
                         name="contact_phone"
                         placeholder="+61 x xxxx xxxx"
+                        pattern="(\+61\s?\d{9}|0\d{9}|\+61[\s\-]?\d[\s\-]?\d{4}[\s\-]?\d{4}|0\d{3}[\s\-]?\d{3}[\s\-]?\d{3})"
+                        title="Australian phone: +61XXXXXXXXX or 0XXXXXXXXX"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
+                    <p class="text-xs text-gray-500 mt-1">Australian format: +61XXXXXXXXX or 0XXXXXXXXX</p>
                 </div>
 
                 <div class="pt-4">

@@ -421,7 +421,7 @@
         "Tests cover valid and invalid cases for all validators",
         "python3 -m pytest tests/ passes with 0 errors"
       ],
-      "status": "pending",
+      "status": "blocked",
       "dependencies": []
     }
   ],
