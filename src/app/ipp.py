@@ -7,9 +7,25 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import List
 
-from src.app.auth import get_current_user
+from jose import JWTError, jwt
+from src.app.auth import get_current_user, SECRET_KEY, ALGORITHM
 from src.app.database import get_db
 from src.app.models import ComplianceStatus, IPPAssessment, User
+
+
+def get_user_from_cookie(request: Request, db: Session) -> User | None:
+    """Get user from access_token cookie."""
+    token = request.cookies.get("access_token")
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if email:
+            return db.query(User).filter(User.email == email).first()
+    except JWTError:
+        pass
+    return None
 
 # Create router for IPP endpoints
 router = APIRouter(tags=["ipp"])
@@ -145,9 +161,12 @@ def get_compliance_score(assessments: List[IPPAssessment]) -> dict:
 @router.get("/ipp-checklist", response_class=HTMLResponse)
 async def get_ipp_checklist(
     request: Request,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    current_user = get_user_from_cookie(request, db)
+    if not current_user:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url="/web/login", status_code=302)
     """
     Display the IPP compliance checklist page.
 

@@ -110,37 +110,37 @@
                 <div class="space-y-2">
                     <div class="flex items-center">
                         <input type="checkbox" name="data_types_names" id="data_types_names" value="true"
-                               {% if pia.data_types and pia.data_types.get('names') %}checked{% endif %}
+                               {% if pia.data_types and 'names' in pia.data_types %}checked{% endif %}
                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label for="data_types_names" class="ml-2 text-sm text-gray-700">Names</label>
                     </div>
                     <div class="flex items-center">
                         <input type="checkbox" name="data_types_addresses" id="data_types_addresses" value="true"
-                               {% if pia.data_types and pia.data_types.get('addresses') %}checked{% endif %}
+                               {% if pia.data_types and 'addresses' in pia.data_types %}checked{% endif %}
                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label for="data_types_addresses" class="ml-2 text-sm text-gray-700">Addresses</label>
                     </div>
                     <div class="flex items-center">
                         <input type="checkbox" name="data_types_health" id="data_types_health" value="true"
-                               {% if pia.data_types and pia.data_types.get('health_info') %}checked{% endif %}
+                               {% if pia.data_types and 'health_info' in pia.data_types %}checked{% endif %}
                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label for="data_types_health" class="ml-2 text-sm text-gray-700">Health Information</label>
                     </div>
                     <div class="flex items-center">
                         <input type="checkbox" name="data_types_financial" id="data_types_financial" value="true"
-                               {% if pia.data_types and pia.data_types.get('financial') %}checked{% endif %}
+                               {% if pia.data_types and 'financial' in pia.data_types %}checked{% endif %}
                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label for="data_types_financial" class="ml-2 text-sm text-gray-700">Financial Information</label>
                     </div>
                     <div class="flex items-center">
                         <input type="checkbox" name="data_types_gov_ids" id="data_types_gov_ids" value="true"
-                               {% if pia.data_types and pia.data_types.get('government_ids') %}checked{% endif %}
+                               {% if pia.data_types and 'government_ids' in pia.data_types %}checked{% endif %}
                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label for="data_types_gov_ids" class="ml-2 text-sm text-gray-700">Government IDs</label>
                     </div>
                     <div class="flex items-center">
                         <input type="checkbox" name="data_types_other" id="data_types_other" value="true"
-                               {% if pia.data_types and pia.data_types.get('other') %}checked{% endif %}
+                               {% if pia.data_types and 'other' in pia.data_types %}checked{% endif %}
                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
                         <label for="data_types_other" class="ml-2 text-sm text-gray-700">Other Personal Information</label>
                     </div>

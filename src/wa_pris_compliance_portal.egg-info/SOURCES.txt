@@ -8,6 +8,7 @@ src/app/main.py
 src/app/models.py
 src/app/notifications.py
 src/app/reports.py
+src/app/seed.py
 src/app/routes/__init__.py
 src/app/routes/web.py
 src/wa_pris_compliance_portal.egg-info/PKG-INFO
@@ -15,6 +16,7 @@ src/wa_pris_compliance_portal.egg-info/SOURCES.txt
 src/wa_pris_compliance_portal.egg-info/dependency_links.txt
 src/wa_pris_compliance_portal.egg-info/requires.txt
 src/wa_pris_compliance_portal.egg-info/top_level.txt
+tests/test_audit_log.py
 tests/test_auth.py
 tests/test_dashboard.py
 tests/test_data_register.py
@@ -29,4 +31,5 @@ tests/test_pias.py
 tests/test_privacy_officer.py
 tests/test_rbac.py
 tests/test_requests.py
+tests/test_seed.py
 tests/test_templates.py
