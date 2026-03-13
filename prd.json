@@ -435,7 +435,7 @@
         "Valid incident creation still works (returns 303 redirect)",
         "python3 -m pytest tests/test_incidents.py passes"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": []
     },
     {

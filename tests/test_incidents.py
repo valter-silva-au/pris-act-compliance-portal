@@ -539,3 +539,271 @@ def test_notification_details_tracking(client, db, test_user):
     assert incident.notification_date is not None
     assert incident.authority_notified == "Office of the Australian Information Commissioner (OAIC)"
     assert incident.status == BreachIncidentStatus.REPORTED
+
+
+def test_create_incident_empty_title_returns_422(client, test_user):
+    """Test POST /api/incidents with empty title returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create incident with empty title
+    date_discovered = datetime.now().strftime("%Y-%m-%d")
+    response = client.post(
+        "/api/incidents",
+        data={
+            "title": "",
+            "description": "This is a valid description with enough characters",
+            "severity": "high",
+            "date_discovered": date_discovered,
+            "affected_records_count": "100",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    # Check error detail (could be string or list format)
+    detail = response.json()["detail"]
+    if isinstance(detail, str):
+        assert "Title" in detail or "title" in detail
+    else:
+        # FastAPI validation error list format
+        assert any("title" in str(err).lower() for err in detail)
+
+
+def test_create_incident_short_title_returns_422(client, test_user):
+    """Test POST /api/incidents with title less than 3 chars returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create incident with short title
+    date_discovered = datetime.now().strftime("%Y-%m-%d")
+    response = client.post(
+        "/api/incidents",
+        data={
+            "title": "AB",
+            "description": "This is a valid description with enough characters",
+            "severity": "high",
+            "date_discovered": date_discovered,
+            "affected_records_count": "100",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Title" in response.json()["detail"]
+
+
+def test_create_incident_short_description_returns_422(client, test_user):
+    """Test POST /api/incidents with description less than 10 chars returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create incident with short description
+    date_discovered = datetime.now().strftime("%Y-%m-%d")
+    response = client.post(
+        "/api/incidents",
+        data={
+            "title": "Valid Title",
+            "description": "Short",
+            "severity": "high",
+            "date_discovered": date_discovered,
+            "affected_records_count": "100",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Description" in response.json()["detail"]
+
+
+def test_create_incident_invalid_severity_returns_422(client, test_user):
+    """Test POST /api/incidents with invalid severity returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create incident with invalid severity
+    date_discovered = datetime.now().strftime("%Y-%m-%d")
+    response = client.post(
+        "/api/incidents",
+        data={
+            "title": "Valid Title",
+            "description": "This is a valid description with enough characters",
+            "severity": "super_critical",
+            "date_discovered": date_discovered,
+            "affected_records_count": "100",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Severity" in response.json()["detail"]
+
+
+def test_create_incident_negative_affected_records_returns_422(client, test_user):
+    """Test POST /api/incidents with negative affected_records_count returns 422."""
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to create incident with negative affected records
+    date_discovered = datetime.now().strftime("%Y-%m-%d")
+    response = client.post(
+        "/api/incidents",
+        data={
+            "title": "Valid Title",
+            "description": "This is a valid description with enough characters",
+            "severity": "high",
+            "date_discovered": date_discovered,
+            "affected_records_count": "-100",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Affected records count" in response.json()["detail"]
+
+
+def test_update_incident_empty_title_returns_422(client, db, test_user):
+    """Test POST /api/incidents/{id} with empty title returns 422."""
+    # Create a test incident
+    incident = BreachIncident(
+        title="Original Title",
+        description="Original description with enough characters",
+        severity=RiskLevel.LOW,
+        date_discovered=datetime.now(),
+        affected_records_count=10,
+        data_types_affected={"names": True, "addresses": False, "health_info": False, "financial": False, "government_ids": False, "other": False},
+        containment_actions="Initial actions",
+        status=BreachIncidentStatus.DETECTED,
+        organization_id=test_user.organization_id
+    )
+    db.add(incident)
+    db.commit()
+    db.refresh(incident)
+
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to update with empty title
+    response = client.post(
+        f"/api/incidents/{incident.id}",
+        data={
+            "title": "",
+            "description": "Updated description with enough characters",
+            "severity": "high",
+            "date_discovered": incident.date_discovered.strftime("%Y-%m-%d"),
+            "affected_records_count": "500",
+            "status": "contained",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    # Check error detail (could be string or list format)
+    detail = response.json()["detail"]
+    if isinstance(detail, str):
+        assert "Title" in detail or "title" in detail
+    else:
+        # FastAPI validation error list format
+        assert any("title" in str(err).lower() for err in detail)
+
+
+def test_update_incident_invalid_severity_returns_422(client, db, test_user):
+    """Test POST /api/incidents/{id} with invalid severity returns 422."""
+    # Create a test incident
+    incident = BreachIncident(
+        title="Original Title",
+        description="Original description with enough characters",
+        severity=RiskLevel.LOW,
+        date_discovered=datetime.now(),
+        affected_records_count=10,
+        data_types_affected={"names": True, "addresses": False, "health_info": False, "financial": False, "government_ids": False, "other": False},
+        containment_actions="Initial actions",
+        status=BreachIncidentStatus.DETECTED,
+        organization_id=test_user.organization_id
+    )
+    db.add(incident)
+    db.commit()
+    db.refresh(incident)
+
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to update with invalid severity
+    response = client.post(
+        f"/api/incidents/{incident.id}",
+        data={
+            "title": "Updated Title",
+            "description": "Updated description with enough characters",
+            "severity": "invalid_severity",
+            "date_discovered": incident.date_discovered.strftime("%Y-%m-%d"),
+            "affected_records_count": "500",
+            "status": "contained",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Severity" in response.json()["detail"]
+
+
+def test_update_incident_negative_affected_records_returns_422(client, db, test_user):
+    """Test POST /api/incidents/{id} with negative affected_records_count returns 422."""
+    # Create a test incident
+    incident = BreachIncident(
+        title="Original Title",
+        description="Original description with enough characters",
+        severity=RiskLevel.LOW,
+        date_discovered=datetime.now(),
+        affected_records_count=10,
+        data_types_affected={"names": True, "addresses": False, "health_info": False, "financial": False, "government_ids": False, "other": False},
+        containment_actions="Initial actions",
+        status=BreachIncidentStatus.DETECTED,
+        organization_id=test_user.organization_id
+    )
+    db.add(incident)
+    db.commit()
+    db.refresh(incident)
+
+    # Login first
+    response = client.post(
+        "/web/login",
+        data={"username": "test@example.com", "password": "testpassword123"}
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    # Try to update with negative affected records
+    response = client.post(
+        f"/api/incidents/{incident.id}",
+        data={
+            "title": "Updated Title",
+            "description": "Updated description with enough characters",
+            "severity": "high",
+            "date_discovered": incident.date_discovered.strftime("%Y-%m-%d"),
+            "affected_records_count": "-500",
+            "status": "contained",
+        },
+        follow_redirects=False
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "Affected records count" in response.json()["detail"]

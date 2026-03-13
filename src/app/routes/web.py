@@ -1800,6 +1800,26 @@ async def create_incident(
     if not user:
         return RedirectResponse(url="/web/login", status_code=status.HTTP_302_FOUND)
 
+    # Validate title (3-200 chars required)
+    ok, err = validate_required_string(title, "Title", min_len=3, max_len=200)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate description (10-5000 chars required)
+    ok, err = validate_required_string(description, "Description", min_len=10, max_len=5000)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate severity (must be one of low/medium/high/critical)
+    ok, err = validate_enum(severity, "Severity", ["low", "medium", "high", "critical"])
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate affected_records_count (non-negative integer)
+    ok, err = validate_positive_integer(affected_records_count, "Affected records count", allow_zero=True)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
     # Parse date_discovered
     from datetime import datetime
     parsed_date_discovered = datetime.strptime(date_discovered, "%Y-%m-%d")
@@ -1912,6 +1932,26 @@ async def update_incident(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Incident not found"
         )
+
+    # Validate title (3-200 chars required)
+    ok, err = validate_required_string(title, "Title", min_len=3, max_len=200)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate description (10-5000 chars required)
+    ok, err = validate_required_string(description, "Description", min_len=10, max_len=5000)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate severity (must be one of low/medium/high/critical)
+    ok, err = validate_enum(severity, "Severity", ["low", "medium", "high", "critical"])
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
+
+    # Validate affected_records_count (non-negative integer)
+    ok, err = validate_positive_integer(affected_records_count, "Affected records count", allow_zero=True)
+    if not ok:
+        raise HTTPException(status_code=422, detail=err)
 
     # Parse date_discovered
     from datetime import datetime
