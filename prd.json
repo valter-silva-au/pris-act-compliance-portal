@@ -476,7 +476,7 @@
         "Request form has required and type=email on email field",
         "All existing tests still pass"
       ],
-      "status": "pending",
+      "status": "done",
       "dependencies": []
     },
     {
