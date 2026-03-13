@@ -404,6 +404,25 @@
         "TASK-023",
         "TASK-024"
       ]
+    },
+    {
+      "id": "TASK-026",
+      "title": "Add comprehensive field validation across all forms",
+      "description": "Add server-side AND client-side validation for ALL form fields across the entire application:\n\nAUTH FORMS (src/app/auth.py + templates):\n- Email: must be valid email format (use email-validator or regex)\n- Password: min 8 chars, max 72 (bcrypt limit)\n- Full name: 2-100 chars, strip whitespace, no special chars except hyphens/apostrophes\n\nORGANIZATION (settings, onboarding):\n- Org name: 2-200 chars, required\n- ABN: exactly 11 digits, validate with ABN check digit algorithm (weights: 10,1,3,5,7,9,11,13,15,17,19, subtract 1 from first digit, sum weighted digits, divisible by 89)\n- Industry: 2-100 chars\n- Number of employees: positive integer or null\n\nPRIVACY OFFICER (src/app/routes/web.py privacy officer section):\n- Contact phone: Australian format validation \u2014 must match +61XXXXXXXXX or 0XXXXXXXXX (10 digits starting with 0, or +61 followed by 9 digits). Strip spaces/dashes before validation.\n- User selection: must be valid user_id belonging to the organization\n\nPIAs:\n- Title: 3-200 chars, required\n- Description: 10-5000 chars, required\n- Data flow description: max 5000 chars\n- Mitigation measures: max 5000 chars\n- Risk level: must be one of low/medium/high/critical\n- Status transitions: only valid transitions (draft->in_review, in_review->approved/rejected, rejected->draft)\n\nDATA REGISTER:\n- Data category: 2-200 chars, required\n- Description: required, max 2000 chars\n- Storage location: required, 2-500 chars\n- Access controls: required, max 1000 chars\n- Retention period: required, max 200 chars\n- Legal basis: required, max 500 chars\n\nACCESS REQUESTS:\n- Requester name: 2-200 chars, required\n- Requester email: valid email format, required\n- Request type: must be \"access\" or \"correction\"\n- Description: 10-5000 chars, required\n\nBREACH INCIDENTS:\n- Title: 3-200 chars, required\n- Description: 10-5000 chars, required\n- Affected records count: non-negative integer\n- Severity: must be one of low/medium/high/critical\n- Containment actions: max 5000 chars\n\nIMPLEMENTATION:\n1. Create src/app/validators.py with reusable validation functions: validate_email, validate_phone_au, validate_abn, validate_required_string(min, max), validate_enum\n2. Add HTML5 validation attributes to ALL form inputs (required, minlength, maxlength, pattern, type=email, type=tel)\n3. Add server-side validation in EVERY POST/PUT route handler BEFORE database writes \u2014 return 422 with clear error message on failure\n4. For web routes, re-render the form with error messages displayed inline (red text below the field)\n5. Write tests for validators.py covering valid and invalid inputs for each field type",
+      "acceptance_criteria": [
+        "Phone numbers only accept Australian format (+61XXXXXXXXX or 0XXXXXXXXX)",
+        "ABN validates with check digit algorithm (11 digits, weighted sum mod 89)",
+        "Email fields reject invalid formats",
+        "All required text fields enforce min/max length",
+        "PIA status transitions are validated (no draft->approved)",
+        "Enum fields reject invalid values",
+        "HTML5 validation attributes on all form inputs",
+        "Server returns 422 with error message for invalid input",
+        "Tests cover valid and invalid cases for all validators",
+        "python3 -m pytest tests/ passes with 0 errors"
+      ],
+      "status": "pending",
+      "dependencies": []
     }
   ],
   "deploy_target": "docker"
